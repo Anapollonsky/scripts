@@ -1,0 +1,32 @@
+{
+    "axisdata": [
+        {
+            "axisdata": [
+                1, 
+                2, 
+                3, 
+                4, 
+                5
+            ], 
+            "axisname": "Frequency"
+        }, 
+        {
+            "axisdata": [
+                1, 
+                2, 
+                3, 
+                4, 
+                7
+            ], 
+            "axisname": "Magic Dissipation"
+        }
+    ], 
+    "name": "TXFREQ", 
+    "recid": "17", 
+    "singdata": [
+        {
+            "singdata": 5, 
+            "singname": "Who:?"
+        }
+    ]
+}

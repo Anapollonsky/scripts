@@ -1,0 +1,52 @@
+Just some programming exercises.
+* trees
+** Building tree from inorder and postorder.
+Assignment: 
+*** tree 1
+       a
+    b     c
+  d   e    f
+   g      h    
++ inorder:  dgbeachf
++ postorder: gdebhfca
+*** tree 2
+    f
+  h
++ inorder:  hf
++ postorder: hf
+
+*** tree 3
+b
+  e
++ inorder: be
++ postorder: eb
+
+*** tree 4
+g
++ inorder: g
++ postorder: g
+*** solution
+#+BEGIN_SRC python
+  inorder = ['d', 'g', 'b', 'e', 'a', 'c', 'h', 'f']
+  postorder  = ['g', 'd', 'e', 'b', 'h', 'f', 'c', 'a']
+  def build_tree(ino, posto):
+      if len(ino) == 0:
+          return None
+      elif len(ino) == 1:
+          return (ino, None, None)
+      curnode = posto[-1]
+      in_index = ino.index(curnode)
+      leftin = ino[0:in_index]
+      rightin = ino[in_index+1:]
+      leftpost = posto[0:in_index]
+      rightpost = posto[in_index:-1]
+      left = build_tree(leftin, leftpost)
+      right = build_tree(rightin, rightpost)
+      return (curnode, left, right)
+  return build_tree(inorder, postorder)        
+#+END_SRC
+
+#+RESULTS:
+| a | (b (d None ((g) None None)) ((e) None None)) | (c None (f ((h) None None) None)) |
+
+ 
