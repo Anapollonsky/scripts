@@ -1,0 +1,794 @@
+#!/usr/bin/expect -f
+## Summary:
+## vctool automates the process of interacting with clearcase from a
+## local machine by providing simple local commands to update the
+## local /vobs folder to match the one on the server (sync),
+## as well as to check-in and check-out a file by referencing the local
+## copy. The sync implementation does not overwrite files newer than
+## those on the server.
+
+
+## Written by Andrew Apollonsky @ Alcatel-Lucent, 2014
+
+## Usage:
+## "vctool set [var] [value]" to set a vctool variable. Available variables are
+## "view", "laddress", "saddress", and "catchphrase". All four must be
+## configured properly for vctool to operate!
+## "vctool [print | p] [var]" to print a vctool variable. Available variables
+## are "view", "laddress", "saddress", and "catchphrase".
+## "vctool rsync [args]" to sync from server to local machine with
+## user-specified rsync arguments. Example: 'vctool rsync "-am --update"'
+## or 'vctool rsync -aum'.
+## "vctool clean" to sync from the server to the local machine.
+## Differing local files are deleted! Equivalent to "vctool rsync -a --delete"
+## "vctool update" to update local files with newer files.
+## No files are deleted. Equivalent to "vctool rsync -au"
+## "vctool [cleartool | ct] [command]" to pass user-specified command to ct and display result.
+## "vctool ct help" to print list of ct commands.
+## "vctool [lsview | lv]" to list views belonging to user on server. Equivalent to "vctool ct lsview".
+## "vctool [lscheckout | lsco]" to list checked-out files. Equivalent to "vctool lsprivate -co".
+## "vctool [checkin | ci] [filename]" to check in a local file to the server
+## "vctool [checkout | co] [filename]" to check out file from the server
+## "vctool [uncheckout | unco] [filename]" to uncheck out a file. The local version is backed
+## up and overwritten with the remote version. 
+## "vctool [ruploadcu | ruc] [address]" to run uploadcu on the server. If an IP
+## argument is given, that board is uploaded to without permanently
+## modifying ipaddr. Must have properly configured uploadcu script!
+## "vctool [remotebuild | rbld] [type] [mode] to build the project. [type] can be all,
+## app, usl, or pltf, where usl == pltf. [mode] is a combination of
+## "c" for "clean all $PRJ", "n" for "cnf all $PRJ", and m for "mkp all $PRJ"
+## "vctool [interact | i]" to SSH and interact with the server. View is
+## automatically set to default view. Write "+++" to exit.
+## "vctool [interactbuild | ibld] [type] to interactively enter the appbld or uslbld windows.
+## [type] can be app, usl or pltf, where usl == pltf. 
+
+## Tips:
+## Some arguments can consist of several words. In this case, wrap the argument in ""'s. 
+## -If one command returned an error but another didn't,
+## the operation was likely not completed successfully. Clean up after it if necessary.
+## One example is after a failed check-in operation; though the check-in may have failed,
+## the local file permissions were likely nevertheless changed. 
+## - Uncheckedout files are overwritten with the server-version. The two latest copies for each view are kept
+## in a backup directory under ~/.vctool.
+## - Colors can be configured in the script. To remove all colors, set them all to default; as an example,
+## replace 'set g blah' with 'set g $n', leaving 'set n blah' alone.
+
+## Assumptions:
+## -Expect installed in /usr/bin/expect
+## -Properly configured vctool variables with vctool set.
+## -set catchphrase has been run. Default: Run vctool set catchphrase ca7ch.
+## -Server shell config file (.kshrc or .bashrc) with line . .xlnx/xlnxEnv
+## -Change owner of Vobs folder to primary user to enable rsync to work.
+## -Same username on both server and local machine.
+## -Two-way public-key SSH access.
+## -Little error cleanup! If one command returned an error but another didn't,
+## the operation was likely not completed successfully. Clean up after it if necessary.
+
+
+set version 5
+### Configuration
+set USERNAME $env(USER) ;# Username common to both local machine and server
+set VC_DIR "~/.vctool"
+set BACKUP_DIR_BASE "$VC_DIR/backup" ;# Base backup directory name
+set CLEARCASE_SERVER_ADDRESS_FILE "$VC_DIR/clearcase_server_address"
+set VIEWNAME_FILE "$VC_DIR/viewname";# File in which to store the view name
+set LOCAL_ADDRESS_FILE "$VC_DIR/local_address"
+set CATCH_PHRASE_FILE "$VC_DIR/expectstring" ;# Make sure contents are same as $CATCHPHRASE
+set CHECK_IN_PERMISSIONS 444 ;# Local permissions for checked-in files
+set CHECK_OUT_PERMISSIONS 777 ;# Local permissions for checked-out files
+set DEFAULT_SHELL bash
+set LINEWRAP 80 ;# Linewrapping maximum size
+
+set viewname "temp_viewname" ;# Set with vctool set view
+set local_address "not.real.local.address" ;# Set with vctool set laddress
+set clearcase_server_address "not.real.server.address"
+set catch_phrase "ca7ch"
+
+### Colors. If on a light background, feel free to change these.
+### Replace any color with the value for $n to revert to normal text.
+### If modifying these to codes of different character lengths,
+### make appropriate modifications to wordwrap function.
+# No color
+set n "\033\[0;00m"
+# Green
+set g "\033\[0;32m"
+# Red
+set r "\033\[1;31m"
+# Cyan
+set c "\033\[0;36m"
+# Purple
+set p "\033\[1;35m"
+
+### Methods
+
+# Modified_Index takes in a string, and a desired number, and outputs an estimate for the "real"
+# index in that string that corresponds to the desired number of "real" characters (discluding colors)
+# proc modified_index {stringin desired_index} {
+proc modified_index {stringin desired_index} {
+    set counter 0
+    set regsize 7 ;# May change depending on the color codes
+    set colormatchregexp "\033" 
+    for {set i 0} {$i < [string length $stringin]} {incr i} {
+	set tempstr [string range $stringin $i [expr $i + $regsize]]
+	if {[regexp $colormatchregexp $tempstr]} {
+	    incr i $regsize
+        } 
+	incr counter 1
+	if {$counter == $desired_index} {
+	    return $i
+	}
+    }
+    return [string length $stringin]
+}
+
+# Performs wrapping of paragraphs.
+proc wordwrap {width text} {
+    for {set result {}} {[string length $text] > $width} {
+	set text [string range $text [expr {$brk+1}] end]
+    } {
+	set brk [string last " " $text [modified_index $text $width]]
+	if { $brk < 0 } {set brk $width}
+	append result [string range $text 0 $brk] \n
+    }
+    return $result$text
+}
+
+proc auto_rsync {rsynctag} { # Execute rsync command on the remote server using arguments specified in rsynctag
+    set timeout 1800
+    puts "Syncing with $::g$::viewname$::n with rsync arguments $::p$rsynctag$::n"
+
+    log_user 0 ;# Hide output
+    spawn ssh $::clearcase_server_address
+    send "eval `cat ~/.ssh-agent 2>/dev/null` &&  cat $::CATCH_PHRASE_FILE\r"
+    expect $::catch_phrase
+    send " /usr/atria/bin/cleartool setview -exec /home/$::USERNAME/bin/setccmsgrp $::viewname\r" ;# setview
+    expect "Executed xlnxEnv"
+    
+    log_user 1 ;# Show output
+    send "rsync $rsynctag -v /vobs/linuxrru $::USERNAME@$::local_address:/vobs/\r"
+    expect "total size"
+    puts "${::c}linuxrru$::n synced. Syncing$::c rru$::n..."
+    send "rsync $rsynctag -v /vobs/rru $::USERNAME@$::local_address:/vobs/\r"
+    expect "total size"
+    close
+    puts "Both ${::c}linuxrru$::n and$::c rru$::n synced."
+}
+
+proc ct_talk {ct_args} { # Pass arguments to ct on remote server and return result
+    log_user 0
+    spawn ssh $::clearcase_server_address
+    send "/usr/atria/bin/cleartool setview -exec /home/$::USERNAME/bin/setccmsgrp $::viewname \r"
+    expect "Executed xlnxEnv"
+    log_user 1
+    send "ct $ct_args; cat $::CATCH_PHRASE_FILE\r"
+    expect $::catch_phrase
+}
+
+### Main
+set mode [lindex $argv 0];
+
+## Initialization
+# This section creates the .vctool folder and subfiles if they don't exist, and reads them if they do.
+#~/.vctool/
+if {![file isdirectory $VC_DIR]} {
+    file mkdir $VC_DIR
+} 
+
+#~/.vctool/viewname
+if {[file exists $VIEWNAME_FILE]} {
+    set fp [open $VIEWNAME_FILE r]
+    set viewname [read $fp]
+    set viewname [string trim $viewname]
+    close $fp
+} else {
+    set fp [open $VIEWNAME_FILE w]
+    puts -nonewline $fp $viewname
+    close $fp
+}
+#~/.vctool/laddress
+if {[file exists $LOCAL_ADDRESS_FILE]} {
+    set fp [open $LOCAL_ADDRESS_FILE r]
+    set local_address [read $fp]
+    set local_address [string trim $local_address]
+    close $fp
+} else {
+    set fp [open $LOCAL_ADDRESS_FILE w]
+    puts -nonewline $fp $local_address
+    close $fp
+}
+#~/.vctool/saddress
+if {[file exists $CLEARCASE_SERVER_ADDRESS_FILE]} {
+    set fp [open $CLEARCASE_SERVER_ADDRESS_FILE r]
+    set clearcase_server_address [read $fp]
+    set clearcase_server_address [string trim $clearcase_server_address]
+    close $fp
+} else {
+    set fp [open $CLEARCASE_SERVER_ADDRESS_FILE w]
+    puts -nonewline $fp $clearcase_server_address
+    close $fp
+}
+#~/.vctool/ca7ch
+if {[file exists $CATCH_PHRASE_FILE]} {
+    set fp [open $CATCH_PHRASE_FILE r]
+    set catch_phrase [read $fp]
+    set catch_phrase [string trim $catch_phrase]
+    close $fp
+} else {
+    set fp [open $CATCH_PHRASE_FILE w]
+    puts -nonewline $fp $catch_phrase
+    close $fp
+}
+#~/.vctool/backups
+set full_backup_dir ${BACKUP_DIR_BASE}_$viewname
+if {![file isdirectory $full_backup_dir]} {
+    file mkdir $full_backup_dir
+}
+
+## Mode-specific commands
+switch $mode {
+    "rsync" { # Specify rsync arguments for custom sync.
+        set rsync_options [lindex $argv 1];
+        auto_rsync $rsync_options       
+    }
+    
+    "update" { # Safely update unedited files from the server
+        auto_rsync "-au"        
+    }
+    
+    "clean" { # Force local to match remote. Will delete files!
+        auto_rsync "-a --delete"        
+    }
+
+    "ci" -
+    "checkin" { # Check in a file into clearcase
+        set timeout 10
+        set filename [lindex $argv 1];
+        set absolute_filename [exec readlink -f $filename]
+        puts "Checking in $c$filename$n on $g$viewname$n"
+        log_user 0
+        spawn ssh $clearcase_server_address
+        send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname\r"
+        expect "Setting Build Environment Variables"
+        log_user 1
+        send "scp $local_address:$absolute_filename $absolute_filename && ct ci -nc $absolute_filename ; cat $CATCH_PHRASE_FILE\r"
+        expect $catch_phrase
+        close
+        log_user 0
+        spawn chmod $CHECK_IN_PERMISSIONS $filename
+        log_user 1      
+    }
+
+    "up" -
+    "upload" { # Upload a file into clearcase
+        set timeout 10
+        set filename [lindex $argv 1];
+        set absolute_filename [exec readlink -f $filename]
+        puts "Uploading $c$filename$n on $g$viewname$n"
+        log_user 0
+        spawn ssh $clearcase_server_address
+        send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname\r"
+        expect "Setting Build Environment Variables"
+        log_user 1
+        send "scp $local_address:$absolute_filename $absolute_filename; cat $CATCH_PHRASE_FILE\r"
+        expect $catch_phrase
+        close
+
+    }
+
+    "co" -
+    "checkout" { # Check out a file from clearcase
+        set timeout 10
+        set filename [lindex $argv 1];
+        set absolute_filename [exec readlink -f $filename]
+        puts "Checking out $c$filename$n on $g$viewname$n"
+        log_user 0
+        spawn ssh $clearcase_server_address
+        send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+        expect "Executed xlnxEnv"
+        log_user 1
+        send "ct co -nc $absolute_filename; cat $CATCH_PHRASE_FILE\r"
+        expect $catch_phrase
+        close
+        log_user 0
+        spawn chmod $CHECK_OUT_PERMISSIONS $filename
+        log_user 1      
+    }
+
+    "uco" -
+    "unco" -
+    "uncheckout" { # Uncheck out a file in clearcase
+        set timeout 10
+        set filename [lindex $argv 1];
+        set absolute_filename [exec readlink -f $filename]
+        puts "Unchecking out $c$filename$n in $g$viewname$n"
+        log_user 0
+        spawn $DEFAULT_SHELL
+        send "mv -bf $filename $full_backup_dir; cat $CATCH_PHRASE_FILE\r"
+        expect $catch_phrase
+        close
+        spawn ssh $clearcase_server_address
+        send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+        expect "Executed xlnxEnv"
+        log_user 1
+        send "scp $absolute_filename $local_address:$absolute_filename && cat $CATCH_PHRASE_FILE\r"
+        expect $catch_phrase
+        send "ct unco -rm $absolute_filename; cat $CATCH_PHRASE_FILE\r"
+        expect $catch_phrase
+        close
+        log_user 0
+        spawn chmod $CHECK_IN_PERMISSIONS $filename
+        log_user 1
+    }
+
+    "ct" -
+    "cleartool" { # General clearcase interaction
+        set ctargs [lindex $argv 1];
+        ct_talk $ctargs
+    }
+
+    "lv" -
+    "lsview" { # List views on clearcase
+        ct_talk "lsview | grep $USERNAME"
+    }
+
+    "lco" -
+    "lsco" -
+    "lscheckout" { # List checked-out files
+        ct_talk "lsprivate -co"
+    }
+
+    "p" -
+    "print" { # Print a vctool variable
+        set submode [lindex $argv 1];
+        switch $submode {
+            "username" {
+                puts "Current username is $g$USERNAME$n. Username is set by the$p \$USER$n environment variable."
+            }            
+            "view" {
+                puts "Current view is $g$viewname$n."
+            }
+            "laddress" {
+                puts "Current local address is $g$local_address$n."
+            }
+            "saddress" {
+                puts "Current clearcase server address is $g$clearcase_server_address$n."
+            }
+            "catchphrase" {
+                puts "Current catchphrase is $g$catch_phrase$n."
+            }
+            "all" { 
+                puts "Current username is $g$USERNAME$n. Username is set by the$p \$USER$n environment variable."
+                puts "Current view is $g$viewname$n."
+                puts "Current local address is $g$local_address$n."
+                puts "Current clearcase server address is $g$clearcase_server_address$n."
+                puts "Current catchphrase is $g$catch_phrase$n."
+            }
+        }
+    }
+    
+    "set" { # Set a vctool variable
+        set submode [lindex $argv 1];
+        set newval [lindex $argv 2];
+        switch $submode {
+            "view" {
+                set oldview $viewname
+                exec echo "$newval" > $VIEWNAME_FILE
+                puts "Current view changed from $g$oldview$n to $g$newval$n in $c$VIEWNAME_FILE$n"
+            }
+            "laddress" {
+                set oldadd $local_address
+                exec echo "$newval" > $LOCAL_ADDRESS_FILE
+                puts "Current local address changed from $g$oldadd$n to $g$newval$n in $c$LOCAL_ADDRESS_FILE$n"
+            }
+            "saddress" {
+                set oldadd $clearcase_server_address
+                exec echo "$newval" > $CLEARCASE_SERVER_ADDRESS_FILE
+                puts "Current server address changed from $g$oldadd$n to $g$newval$n in $c$CLEARCASE_SERVER_ADDRESS_FILE$n"}
+            "catchphrase" {
+                set timeout 3
+                log_user 0
+                spawn ssh $clearcase_server_address
+                send "ls $VC_DIR\r"
+                expect {
+                    "such file or directory"    {send "mkdir $VC_DIR\r"}
+                }
+                send "echo $newval > $CATCH_PHRASE_FILE; echo $CATCH_PHRASE_FILE\r"
+                expect $catch_phrase
+                exec echo $newval > $CATCH_PHRASE_FILE
+                puts "Catchphrase changed to$g $newval$n in $c$CATCH_PHRASE_FILE$n and $r$clearcase_server_address$n:$c$CATCH_PHRASE_FILE$n."
+                close
+            }
+        }
+    }
+
+    "i" -
+    "interact" { # Interact
+        set submode [lindex $argv 1];
+        switch $submode {
+            "remote" -
+            "r" {
+                log_user 0
+                spawn ssh $clearcase_server_address
+                send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+                expect "Executed xlnxEnv"
+                log_user 1
+                puts "Entering interact mode. Write ${g}+++$n to exit."
+                interact +++ return
+                close
+            }
+            "rbld" -
+            "remotebuild" {
+                set build_type [lindex $argv 2]
+                if {$build_type != "app" && $build_type != "usl" && $build_type != "pltf"} {
+                    puts "Error: Invalid build type!"
+                    exit
+                }
+                log_user 0
+                spawn ssh $clearcase_server_address
+                send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+                expect "Executed xlnxEnv"        
+                send "export ASB_BUILD_TYPE=pltf && alias go='. $\{LNX_ENV_DIR\}/goto.ksh' && . $\{KSH_ENV_DIR\}/run_env.ksh\r"
+                expect "Setting Build Environment Variables"
+                if {$build_type == "usl" || $build_type == "pltf"} {
+                    send "cd /vobs/linuxrru && . $\{KSH_ENV_DIR\}/env_vobs_linuxrru_pltf\r"
+                    expect "enviroment to make RRH platform build" 
+                } else {
+                    send "cd /vobs/rru\ && . $\{KSH_ENV_DIR\}/env_vobs_linuxrru_app\r"
+                    expect "enviroment to make RRH application build" ;# They misspelled environment!
+                }
+                log_user 1
+                puts "Entering interact mode for $p$build_type$n. Write ${g}+++$n to exit."
+                interact +++ return
+                close
+            }
+        }
+    }
+    
+    "ruc" -
+    "ruploadcu" { # Uploadcu
+        if {[llength $argv] == 2} {
+            set boardip [lindex $argv 1]
+            puts "Uploading .so files to $r$boardip$n..."
+        } else { puts "Uploading .so files to board..." }
+        log_user 0
+        spawn ssh $clearcase_server_address
+        send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+        expect "Executed xlnxEnv"
+        send "cd ~\r"
+        if {[llength $argv] == 2} {send "cat ipaddr > ipaddr_temp; echo $boardip > ipaddr\r"}
+        log_user 1
+        send "./uploadcu\r"
+        expect "Finished loading Private files"
+        log_user 0
+        if {[llength $argv] == 2} {send "cat ipaddr_temp > ipaddr; rm ipaddr_temp; echo catch\r"}
+        expect "catch"
+        log_user 1
+        close
+    }
+
+    "bld" -
+    "build" {
+        set submode [lindex $argv 1];
+        switch $submode {
+            "r" -
+            "remote" {
+                set timeout 600
+                set build_type [lindex $argv 2]
+                set cmodes [lindex $argv 3]
+                if {[string match *c* $cmodes]} { set cln 1 } else { set cln 0 }
+                if {[string match *n* $cmodes]} { set cnf 1 } else { set cnf 0 }
+                if {[string match *m* $cmodes]} { set mkp 1 } else { set mkp 0 }
+                set cmdstr ""
+                if {$cln == 1} { append cmdstr "cln all \$PRJ;" }
+                if {$cnf == 1} { append cmdstr "cnf all \$PRJ;" }
+                if {$mkp == 1} { append cmdstr "mkp all \$PRJ;" }
+                if {$build_type == "app" || $build_type == "all"} {
+                    puts "Running $p$cmdstr$n on$r app$n..."
+                    log_user 0
+                    spawn ssh $clearcase_server_address
+                    send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+                    expect "Executed xlnxEnv"
+                    send "export ASB_BUILD_TYPE=pltf && alias go='. $\{LNX_ENV_DIR\}/goto.ksh' && . $\{KSH_ENV_DIR\}/run_env.ksh\r"
+                    expect "Setting Build Environment Variables"
+                    send "cd /vobs/rru\ && . $\{KSH_ENV_DIR\}/env_vobs_linuxrru_app\r"
+                    expect "enviroment to make RRH application build"
+                    log_user 1
+                    send "$cmdstr cat $CATCH_PHRASE_FILE\r"
+                    expect "$catch_phrase"
+                    sleep 1
+                    close
+                    puts "Running $p$cmdstr$n on$p app$n completed!"
+                }
+                if {$build_type == "usl" || $build_type == "all" || $build_type == "pltf"} {
+                    puts "Running $p$cmdstr$n on$r pltf$n..." 
+                    log_user 0
+                    spawn ssh $clearcase_server_address
+                    send "/usr/atria/bin/cleartool setview -exec /home/$USERNAME/bin/setccmsgrp $viewname \r" 
+                    expect "Executed xlnxEnv"
+                    send "export ASB_BUILD_TYPE=pltf && alias go='. $\{LNX_ENV_DIR\}/goto.ksh' && . $\{KSH_ENV_DIR\}/run_env.ksh\r"
+                    expect "Setting Build Environment Variables"
+                    send "cd /vobs/linuxrru && . $\{KSH_ENV_DIR\}/env_vobs_linuxrru_pltf\r"
+                    expect "enviroment to make RRH platform build" 
+                    log_user 1
+                    send "$cmdstr cat $CATCH_PHRASE_FILE\r"
+                    expect "$catch_phrase"
+                    sleep 1
+                    close
+                    puts "Running $p$cmdstr$n on$p pltf$n completed!"
+                }
+            }
+
+            "l" -
+            "local" {
+                set timeout 600
+                set build_type [lindex $argv 2]
+                set cmodes [lindex $argv 3]
+                if {[string match *c* $cmodes]} { set cln 1 } else { set cln 0 }
+                if {[string match *n* $cmodes]} { set cnf 1 } else { set cnf 0 }
+                if {[string match *m* $cmodes]} { set mkp 1 } else { set mkp 0 }
+                set cmdstr ""
+                if {$cln == 1} { append cmdstr "cln all \$PRJ;" }
+                if {$cnf == 1} { append cmdstr "cnf all \$PRJ;" }
+                if {$mkp == 1} { append cmdstr "mkp all \$PRJ;" }
+                if {$build_type == "app" || $build_type == "all"} {
+                    puts "Running $p$cmdstr$n on$r app$n..."
+                    spawn $DEFAULT_SHELL
+                    send ". ~/.xlnx/xlnxEnv;  export ASB_BUILD_TYPE=pltf; alias go='. \$\{LNX_ENV_DIR\}/goto.ksh';\
+. \$\{KSH_ENV_DIR\}/run_env.ksh;  cd ~; cat $CATCH_PHRASE_FILE\r"
+                    expect $catch_phrase
+                    send ". \$\{KSH_ENV_DIR\}/env_vobs_linuxrru_app; cat $CATCH_PHRASE_FILE\r"
+                    expect $catch_phrase
+                    send "$cmdstr cat $CATCH_PHRASE_FILE\r"
+                    expect $catch_phrase            
+                    close
+                    puts "Running $p$cmdstr$n on$p app$n completed!"
+                }
+                if {$build_type == "usl" || $build_type == "all" || $build_type == "pltf"} {
+                    puts "Running $p$cmdstr$n on$r pltf$n..."
+                    spawn $DEFAULT_SHELL
+                    send ". ~/.xlnx/xlnxEnv; export ASB_BUILD_TYPE=pltf; alias go='. \$\{LNX_ENV_DIR\}/goto.ksh';\
+. \$\{KSH_ENV_DIR\}/run_env.ksh; cd ~; cat $CATCH_PHRASE_FILE\r"
+                    expect $catch_phrase
+                    send ". \$\{KSH_ENV_DIR\}/env_vobs_linuxrru_pltf; cat $CATCH_PHRASE_FILE\r"
+                    expect $catch_phrase
+                    send "$cmdstr cat $CATCH_PHRASE_FILE\r"
+                    expect $catch_phrase            
+                    close
+                    puts "Running $p$cmdstr$n on$p pltf$n completed!"
+                }        
+            }
+        }
+    }
+
+    "h" -
+    "help" { # Print a vctool variable
+        set submode [lindex $argv 1];
+        switch $submode {
+	    "" {
+		puts "\
+Please select a help topic, e.g. 'vctool help about'.\n\
+${g}General Topics${n}\n\
+${c}about${n}: About vctool.\n\
+${c}start${n}: Getting Started guide to setting up vctool.\n\
+${c}tips${n}: Things to keep in mind.\n\
+${g}Commands${n}\n\
+${c}set${n}: Set the value of a vctool variable.\n\
+${c}print${n}: Print the value of a vctool variable.\n\
+${c}rsync${n}: Sync vobs from the clearcase server to the local machine with user-defined rsync parameters.\n\
+${c}clean${n}: Sync vobs from the clearcase server to the local machine, overwriting any differences.\n\
+${c}update${n}: Sync vobs from the clearcase server to the local machine, only overwriting with more recent files.\n\
+${c}interact${n}: Open an interactive session with a special state, such as an SSH to the server.\n\
+${c}build${n}: Build /vobs/linuxrru and /vobs/rru.\n\
+${c}uploadcu${n}: Run the uploadcu script (not included) to upload a build to a specified board.\n\
+${c}checkout${n}: Check a file out from clearcase.\n\
+${c}uncheckout${n}: Uncheck a file from clearcase.\n\
+${c}checkin${n}: Check a file into clearcase.\n\
+${c}upload${n}: Upload a local copy of a file to the server, without checking it in.\n\
+${c}cleartool${n}: Send a generic clearcase command to the server, and return the response.\n\
+${c}lsview${n}: Print out a list of views belonging to the user.\n\
+${c}lscheckout${n}: Print a list of checked out files."
+	    }
+            "about" {
+                puts [wordwrap $LINEWRAP  "\
+    ${g}vctool v$version${n} is a tool written at ${p}Alcatel-Lucent${n} that automates the process\
+    of interacting with a clearcase server from a local linux machine by providing simple commands to\
+    perform operations such as syncing vobs, checking files in and out,\
+    and listing checked out files."]
+            }
+            "start" {
+                set str1 "${g}Getting Started${n}"
+                set str2  [wordwrap $LINEWRAP "To get started with vctool, you set a few variables. Use the ${c}set${n} command to\
+    set the local address (such as an IP address), a clearcase server address, a valid viewname\
+    to use (after setting a clearcase server address, you can run ${c}vctool lsview${n} to list your valid views),\
+    and a catchphrase (such as ${c}vctool set catchphrase ca7ch${n}).\
+    You should ensure that there is passwordless SSH access between your local and server machine\
+    (look into SSH public-key cryptography), that you have a /vobs directory owned by the primary user,\
+    and that your server shell .rc file (typically ${r}~/.kshrc${n} or ${r}~/.bashrc${n})\
+    sources the ${r}~/.xlnx/xlnxEnv${n} file."]
+                puts $str1
+                puts $str2
+            }            
+            "tips" {
+
+                puts "${g}Tips${n}"
+    puts [wordwrap $LINEWRAP "\
+    ** Some arguments consist of several words. In this case, wrap the argument in double quotes."]
+    puts [wordwrap $LINEWRAP "\
+** If one command returned an error but another didn't, the operation was likely not completed successfully.\
+    Clean up after it if necessary. One example is after a failed check-in operation; though the check-in may have failed,\
+    the local file permissions could nevertheless have been changed."]
+    puts [wordwrap $LINEWRAP "\
+** Colors can be configured by editing this program. To remove all colors, set\
+    them all to default; as an example, replace ${c}set g blah$n with ${c}set g \$n$n, leaving ${c}set n blah$n alone (as \$n represents the default color)."]
+            }
+            "set" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool set \[var\] \[value\]${n} sets a vctool variable. Available variables are ${p}view${n},\
+    ${p}laddress${n}, ${p}saddress${n}, and ${p}catchphrase${n}. All four must be configured properly for\
+    vctool to operate!"]
+            }
+            "print" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool print|p \[var\]|all${n} prints a vctool variable. Available variables are ${p}view${n},\
+    ${p}laddress${n}, ${p}saddress${n}, ${p}catchphrase${n}. ${p}all${n} will print all vctool variables."]
+            }
+            "rsync" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool rsync  \[args\]${n} syncs from server to local machine with user-specified\
+    rsync arguments. Example: ${c}vctool rsync \"-am --update\"$n or ${c}vctool rsync -aum$n.\
+    See rsync documentation (${c}man rsync${n}) for more information."]
+            }
+            "clean" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool clean${n} syncs from the server to the local machine. Differing local files are deleted!\
+    Equivalent to ${c}vctool rsync -a --delete${n}."]
+            }
+            "update" {
+                puts [wordwrap $LINEWRAP "\
+     ${g}vctool update${n} updates local files with newer files from the current view of the clearcase server.\
+    No files are deleted. Equivalent to ${c}vctool rsync -au${n}."]
+            }
+            "interact" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool interact|i \[mode\] \[?submode\]${n} opens an interactive session. Valid modes are\
+    ${p}remote${n}|${p}r${n} and ${p}remotebuild${n}|${p}rbld${n}. ${p}remote${n} uses SSH to connect to\
+    the clearcase server and selects your current view. ${p}remotebuild${n} connects to the same server and\
+    runs the required scripts to allow for the building of ${r}app${n} or ${r}pltf${n} (the equivalent of the\
+											    ${r}uslbld${n} and ${r}appbld${n} windows). ${p}remotebuild${n} submodes are ${p}app${n} and ${p}usl${n}."]
+            }
+            "build" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool build|bld remote|local app|pltf|all (cnm)${n} begins the build process. It opens a build window\
+    corresponding to ${p}pltf${n} or ${p}app${n} or both in sequence  (the equivalent of the ${r}uslbld${n} and\
+    ${r}appbld${n} windows) and runs a subset of ${p}cln all \$PRJ; cnf all \$PRJ; mkp all \$PRJ;${n}\
+    where ${c}cln all \$PRJ;${n} corresponds to ${r}c${n}, ${c}cnf all \$PRJ${n} corresponds to ${r}n${n} and\
+    ${c}mkp all \$PRJ${n} corresponds to ${r}m${n}. Remote/Local decides whether this is attempted\
+    remotely or on the local machine. Example: ${c}vctool bld remote app nm${n} will run\
+    ${p}cnf all \$PRJ; mkp all \$PRJ;${n} in the appbld view on the clearcase server."]
+            }
+            "uploadcu" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool uploadcu \[?address\]${n} runs the ${r}~/uploadcu${n} script from the server. If an\
+    address is given, then the uploadcu script is targeted at the board corresponding to that address.\
+    Requires uploadcu to be properly set up."]
+            }
+            "checkout" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool checkout|co \[filename\]${n} checks out the file at the current clearcase server.\
+    The local copy of the file is unlocked for copying."]
+            }
+            "uncheckout" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool uncheckout|unco \[filename\]${n} unchecks out the file at the current clearcase server.\
+    The local copy of the file is replaced with a remote copy, with the local copy being temporarily backed\
+    up to $VC_DIR."]
+            }
+            "checkin" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool checkin|ci \[filename\]${n} checks in a file at the current clearcase server.\
+    The local copy is sent to the server and checked in."]
+            }
+            "upload" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool upload|up \[filename\]${n} uploads a local file to the current clearcase server.\
+    No checking in is performed."]
+            }
+            "cleartool" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool cleartool|ct \"\[command\]\"${n} sends the command to the server's cleartool command\
+    and prints a response. Multi-word commands should be enclosed in double quotation marks.\
+    Example: ${c}vctool cleartool help${n} will print out the entire cleartools help menu, whereas\
+    ${c}vctool cleartool \"help | grep activity\"${n} will print the entries of the help menu with\
+    the word \"activity\" included."]
+            }
+            "lsview" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool lsview|lv${n} prints a list of views belonging to the current user. Equivalent to\
+    ${c}vctool cleartool \"lsview | grep USERNAME\"${n}"]
+            }
+            "lscheckout" {
+                puts [wordwrap $LINEWRAP "\
+    ${g}vctool lscheckout|lsco${n} prints a list of checked out files in the current view. Equivalent\
+    to ${c}vctool cleartool \"lsprivate -co\"${n}"]
+            }
+            
+        }
+    }
+
+    
+    "oldhelp" { # Help
+        puts "${g}Summary:$n\n\
+    vctool automates the process of interacting with clearcase from a\n\
+    local machine by providing simple local commands to perform operations\n\
+    such as syncing vobs, checking files in and out, and listing checked out files.\n\
+    \n\
+    \n\
+    ${g}vctool$n $version, written by$g Andrew Apollonsky$n @$p Alcatel-Lucent$n, 2014\n\
+    \n\
+    ${g}Usage:$n\n\
+    ${c}vctool set \[var\] \[value\]${n} to set a vctool variable.\n\
+    \  Available variables are ${p}view${n}, ${p}laddress${n}, ${p}saddress${n}, and ${p}catchphrase${n}.\n\
+    \  All four must be configured properly for vctool to operate!\n\
+    ${c}vctool print|p \[var\]${n} to print a vctool variable.\n\
+    \  Available variables are ${p}view${n}, ${p}laddress${n}, ${p}saddress${n}, and ${p}catchphrase${n}.\n\
+    ${c}vctool rsync \[args\]${n} to sync from server to local machine with user-specified\n\
+    \  rsync arguments. Example: ${c}vctool rsync \"-am --update\"$n or ${c}vctool rsync -aum$n.\n\
+    ${c}vctool clean${n} to sync from the server to the local machine.\n\
+    \  Differing local files are deleted! Equivalent to ${c}vctool rsync -a --delete${n}\n\
+    ${c}vctool update${n} to update local files with newer files.\n\
+    \  No files are deleted. Equivalent to ${c}vctool rsync -au${n}\n\
+    ${c}vctool cleartool|ct \[command\]${n} to pass user-specified command to ct and display\n\
+    \  result.\n\
+    ${c}vctool ct help${n} to print list of ct commands.\n\
+    ${c}vctool lsview|lv${n} to list views belonging to user on server.\n\
+    \  Equivalent to ${c}vctool ct lsview${n}.\n\
+    ${c}vctool lscheckout|lsco${n} to list checked-out files.\n\
+    \  Equivalent to ${c}vctool lsprivate -co${n}.\n\
+    ${c}vctool checkin|ci \[filename\]${n} to check in a local file to the server\n\
+    ${c}vctool checkout|co \[filename\]${n} to check out file from the server\n\
+    ${c}vctool uncheckout|unco \[filename\]$n to uncheck out a file.\n\
+    \  The local version is backed up and overwritten with the remote version.\n\
+    ${c}vctool ruploadcu|ruc \[address\]${n} to run uploadcu on the server. If an IP argument\n\
+    \  is given, that board is uploaded to without permanently modifying ipaddr.\n\
+    \  Must have properly configured uploadcu script!\n\
+    ${c}vctool remotebuild|rbld \[type\] \[mode\]$n to build the project on the server.\n\
+    \   $r\[type\]$n can be$p all$n,$p app$n,$p usl$n, or$p pltf$n, where$p usl$n ==$p pltf$n.$r \[mode\]$n is a\n\
+    \   combination of ${r}c${n} for ${p}clean all \$PRJ${n}, ${r}n${n} for ${p}cnf all \$PRJ${n}, and ${r}m${n} for\n\
+    \   ${p}mkp all \$PRJ${n}\n\
+    ${c}vctool interact|i${n} to SSH and interact with the server. View is automatically\n\
+    \  set to default view. Write ${r}+++${n} to exit.\n\
+    ${c}vctool interactbuild|ibld \[type\]$n to interactively enter the appbld or uslbld\n\
+    \  windows. ${r}\[type\]$n can be$p app$n$p usl$n or$p pltf$n, where$p usl$n ==$p pltf$n. Write ${r}+++${n} to exit.\n\
+    \n\
+    ${g}Tips:$n\n\
+    - Some arguments can consist of several words. In this case, wrap the argument\n\
+    \  in double quotes.\n\
+    - If one command returned an error but another didn't, the operation was likely\n\
+    \  not completed successfully. Clean up after it if necessary. One example is\n\
+    \  after a failed check-in operation; though the check-in may have failed,\n\
+    \  the local file permissions were likely nevertheless changed.\n\
+    - ${c}Uncheckedout$n files are overwritten with the server version. The two latest\n\
+    \  copies for each view are kept in a backup directory under $r$VC_DIR$n.\n\
+    - Colors can be configured by editing the script. To remove all colors, set\n\
+    \  them all to default; as an example, replace ${c}set g blah$n with ${c}set g \$n$n, leaving\n\
+    \  ${c}set n blah$n alone.\n\
+    \n\
+    ${g}Assumptions:$n\n\
+    -Expect installed in ${r}/usr/bin/expect${n}.\n\
+    -Properly configured vctool variables with ${c}vctool set$n\n\
+    -${c}set catchphrase$n has been run. Default: Run ${c}vctool set catchphrase ca7ch$n\n\
+    -Server shell config file (${r}.kshrc${n} or ${r}.bashrc${n}) with line ${p}. .xlnx/xlnxEnv${n}.\n\
+    -Change owner of /vobs folder to primary user to enable rsync to work.\n\
+    -Same username on both server and local machine.\n\
+    -Two-way public-key SSH access."
+    }
+    
+    "--version" -
+    "v" {
+        puts "${g}vctool $version$n"
+    }
+
+    default {
+        puts "Unrecognized vctool subcommand, exiting."
+    }
+}

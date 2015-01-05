@@ -1,0 +1,75 @@
+#!/usr/bin/expect -f
+
+####
+# Script finds the average delay between the linux startup and the ethernet port startup.
+# It resets the power supply by telneting in, connects via serial port to the board,
+# monitors it for a login prompt, then closes the serial connection and begins pinging
+# the board, measuring how long it takes for 100% of the packets to be acked.
+
+log_file -noappend ~/expect_psu_tester.log
+
+set timeout 500; #Expect timeout period
+
+set max_iterations 500
+set iterator 1
+set globalcounter 0
+set averagedelay 0
+set delay_list { }
+#set power_supply_telnet {135.112.98.232 5024}
+#set cyclades_telnet "135.112.98.10 5010"
+#set board_ping_ip "135.112.98.44"
+
+send_user "########################################\n"
+send_user "########################################\n"
+send_user "Beginning script.\n"
+send_user "########################################\n"
+send_user "########################################\n"
+
+while {$iterator <= $max_iterations} {
+    ### Connect to power supply, restart, disconnect
+    spawn telnet 135.112.98.232 5024
+    sleep 5
+    send "OUTP OFF\r"
+    sleep 3
+    send "OUTP ON\r"
+    sleep 1
+    close
+
+    ### Connect to cyclades, continue when linux is booted. Assumes no password for server.
+    #spawn ssh usnjapp05.mh.lucent.com
+    #sleep 3
+    #send "connect 2a437 port9\r"
+    #sleep 1
+    spawn telnet 135.112.98.10 5010
+    sleep 1
+    expect {
+	"ZYNQ-RRH login:"       {send_user "Login Asked!\n"}
+    }
+    close
+
+    ### Try and connect to board via ethernet.
+    set connectstatus 0
+    set counter 0
+    while {$connectstatus == 0} {
+	spawn ping 135.112.98.44 -w 3 -c 1 -q; # Ping, deadline of 3s, once.
+	expect {
+	    " 0%" {set connectstatus 1}; # connected! Continue.
+	    " 100%" {send_user "Time Difference: $counter\n"} 
+	}
+	set counter [expr $counter + 3]
+    }
+    close
+
+    set globalcounter [expr $globalcounter + $counter]
+    set averagedelay [expr $globalcounter / $iterator]
+    set delay_list [concat $delay_list $counter]
+    set timestamp [clock format [clock seconds] -format "%Y-%m-%d|%H:%M:%S"]
+    send_user "########################################\n"
+    send_user "$timestamp\n"
+    send_user "Delay this iteration: $counter\n"
+    send_user "Delay over all iterations thus far: $delay_list\n"
+    send_user "Average delay thus far: $averagedelay\n"
+    send_user "Iteration #: $iterator of $max_iterations\n"
+    send_user "########################################\n"
+    set iterator [expr $iterator + 1]
+}
