@@ -141,20 +141,29 @@ if __name__ == "__main__":
     ## startup
     if not os.path.exists(BCI_DIR):
         os.makedirs(BCI_DIR)
+    # Initial helping
+    if len(args) == 1:
+        out1 = "bcitool allows for quick search of Alcatel-Lucent BCI commands. The BCI menus are first indexed, the resulting database stored locally. Search commands are made available to find the desired command quickly. To find out how to use a certain command, use the commands below, e.g. 'bcitool help index'"
+        out2 = """
 
+Commands:
+index -- Connects to a board and begins indexing the bci commands.
+search -- Perform a basic search on the indexed commands.
+dump -- Print out all nodes for use with external programs like "grep".
+"""
+        print textwrap.fill(out1,TEXTWRAP) + out2                
     ## indexing
-    if args[1] == "index" or args[1] == "i":
-        if "-v" in args:
-            con.logfile_read = sys.stdout
-            args.remove("-v")
-        if "--verbose" in args:
-            args.remove("--verbose")
-
+    elif args[1] == "index" or args[1] == "i":
         if (len(args) > 2):
             BOARD_IP = args[2]
         print("Indexing files on " + BOARD_IP + "...")
         board_connect_command = "telnet " + BOARD_IP + " " + BCI_PORT
         con = pexpect.spawn(board_connect_command)        
+        if "-v" in args:
+            con.logfile_read = sys.stdout
+            args.remove("-v")
+        if "--verbose" in args:
+            args.remove("--verbose")
         bcitree = tree()
         con.expect('login')
         con.sendline('lucent')
@@ -168,7 +177,7 @@ if __name__ == "__main__":
         print("Index completed!")
 
     ## searching
-    if args[1] == "grep" or args[1] == "search":
+    elif args[1] == "grep" or args[1] == "search":
         check_tree_file()
         searchdescr = True
         searchtitles = True
@@ -187,7 +196,7 @@ if __name__ == "__main__":
         print_search_results(search_results)
 
     ## dumping
-    if args[1] == "dump":
+    elif args[1] == "dump":
         check_tree_file()
         infile = open(TREE_FILE, 'r+')
         bcitree = pickle.load(infile)
@@ -196,11 +205,11 @@ if __name__ == "__main__":
         print_search_results(search_results)
 
     # version
-    if args[1] == "-v" or args[1] == "--version":
+    elif args[1] == "-v" or args[1] == "--version":
         print "bcitool v" + str(VERSION)
 
     ## helping
-    if args[1] == "help":
+    elif len(args) == 1 or args[1] == "help":
         if len(args) == 2:
             out1 = "bcitool allows for quick search of Alcatel-Lucent BCI commands. The BCI menus are first indexed, the resulting database stored locally. Search commands are made available to find the desired command quickly. To find out how to use a certain command, use the commands below, e.g. 'bcitool help index'"
             out2 = """

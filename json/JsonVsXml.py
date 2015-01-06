@@ -1,6 +1,5 @@
 #!/usr/bin/python
 import json
-import jsonpickle
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -52,4 +51,4 @@ f = open('testfile', 'w+')
 f.write(Record1.to_JSON())
 f.close()
 
-print json.dumps(Record1.__dict__)
+
