@@ -14,12 +14,13 @@ import textwrap
 
 re.DOTALL
 
-BCI_DIR = "/home/aapollon/.bcitool/"
+BCI_DIR = os.environ['HOME'] + "/.bcitool/"
+
 TREE_FILE = BCI_DIR + "bci.pkl"
-BOARD_IP = "135.112.98.50"
+
 BCI_PORT = "7006"
 TEXTWRAP = 80
-VERSION = 1
+VERSION = 2
 # def dicts(t): return {k: dicts(t[k]) for k in t} https://gist.github.com/hrldcpr/2012250
 
 def tree(): #http://stackoverflow.com/questions/3009935/looking-for-a-good-python-tree-data-structure
@@ -154,8 +155,7 @@ dump -- Print out all nodes for use with external programs like "grep".
         print textwrap.fill(out1,TEXTWRAP) + out2                
     ## indexing
     elif args[1] == "index" or args[1] == "i":
-        if (len(args) > 2):
-            BOARD_IP = args[2]
+        BOARD_IP = args[2]
         print("Indexing files on " + BOARD_IP + "...")
         board_connect_command = "telnet " + BOARD_IP + " " + BCI_PORT
         con = pexpect.spawn(board_connect_command)        
@@ -163,6 +163,7 @@ dump -- Print out all nodes for use with external programs like "grep".
             con.logfile_read = sys.stdout
             args.remove("-v")
         if "--verbose" in args:
+            con.logfile_read = sys.stdout            
             args.remove("--verbose")
         bcitree = tree()
         con.expect('login')
@@ -182,12 +183,24 @@ dump -- Print out all nodes for use with external programs like "grep".
         searchdescr = True
         searchtitles = True
         searchcase = False
-        if "--case-sensitive" in args or "-c" in args:
+        if "--case-sensitive" in args:
             searchcase = True
-        if "--titles-only" in args or "-t" in args:
+            args.remove("--case-sensitive")
+        if "-c" in args:
+            searchcase = True
+            args.remove("-c") 
+        if "--titles-only" in args:
+             searchdescr = False
+             args.remove("--titles-only")
+        if "-t" in args:
             searchdescr = False
-        if "--descriptions-only" in args or "-d" in args:
+            args.remove("-t")
+        if "--descriptions-only" in args:
             searchtitles = False
+            args.remove("--descriptions-only")
+        if "-d" in args:
+            searchtitles = False
+            args.remove("-d")            
         infile = open(TREE_FILE, 'r+')
         bcitree = pickle.load(infile)
         infile.close()
@@ -222,7 +235,7 @@ dump -- Print out all nodes for use with external programs like "grep".
             print textwrap.fill(out1,TEXTWRAP) + out2        
 
         elif args[2] == "index":
-            out1 = "'bcitool index|i [ipaddress] [-v|--verbose]' connects to either the hardcoded or the given board address, enters the bci menu, and begins indexing all available commands. The commands are saved to a local file for use by the search facilities. -v prints out the progress of the indexer during the operation. Note, if the bci commands are unreachable (due to launch being off, for example), this will fail!"
+            out1 = "'bcitool index|i [ipaddress] [-v|--verbose]' connects to either the hardcoded or the given board address, enters the bci menu, and begins indexing all available commands. The commands are saved to a local file for use by the search facilities. -v prints out the progress of the indexer during the operation, recommended for ensuring correct functionality. Note, if the bci commands are unreachable (due to launch being off, for example), this will fail!"
             print textwrap.fill(out1, TEXTWRAP)
 
         elif args[2] == "search":
