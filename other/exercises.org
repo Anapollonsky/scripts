@@ -50,3 +50,24 @@ g
 | a | (b (d None ((g) None None)) ((e) None None)) | (c None (f ((h) None None) None)) |
 
  
+** Lowest common ancestor
+   a
+  b  c
+    d  e
+
+#+BEGIN_SRC python
+  from collections import deque
+
+  tree = ('a', ('b', None, None), ('c', ('d', None, None), ('e', None, None)))
+
+  def lowest_common_ancestor(vals, head):
+      q = deque()
+
+
+  def lowest_common_ancestor_helper(vals, head, deq, ans):
+      for i, k in enumerate(vals):
+          if k == head[0]:
+              ans[i] = 
+              
+
+#+END_SRC
