@@ -6,6 +6,12 @@
 // #include "zconf.h"
 // #include <sys/syscall.h>
 
+#include "i2c_eeprom.c"
+
+
+
+
+
 using namespace std;
 
 // Example:  /vobs/linuxrru/usl/fd_rrh_ca1/i2cfd_rrh_ca1/i2c_bci.c:222
@@ -37,6 +43,16 @@ int writeBufferToFile(char *filename, UINT8 buffer, UINT8 buffer_entries){
     }    
     fclose(fp);
     return OK;
+}
+
+// http://stackoverflow.com/questions/8465006/how-to-concatenate-2-strings-in-c
+int command_unzip(char *filename){
+    char* precommand = "gunzip ";
+    char *command = malloc(strlen(precommand) + strlen(filename) + 1);
+    strcpy(command, precommand);
+    // strcat(
+    // system("gunzip" 
+
 }
 
 void traverse_xml(void) {
