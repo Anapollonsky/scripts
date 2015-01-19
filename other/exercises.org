@@ -207,3 +207,64 @@ Visit a node if never visited. Update path. New path will never be shorter than 
 #+RESULTS:
 | x | y | z |
 
+** Word-neighbors
+You're given two words. Find the shortest path between them, where a single move entails switching a single letter in each word (or inserting one), and each intermediary step must be a valid word. 
+
+This can be made faster by searching from both sides, but building the database of neighbors is overwhelmingly the computationally-intensive part anyway. Also, either I have a limited word list, or the english vocabulary is small; I can't get from baudelaire to a.
+
+#+BEGIN_SRC python
+  from collections import deque
+
+  f = open('wordlist.txt', 'r')
+  wordlist = f.readlines()
+  wordlist = [x.strip("\n").lower() for x in wordlist]
+  wordict = {}
+  for line in wordlist:
+      wordict[line] = []
+  f.close()
+
+  letters = list('abcdefghijklmnopqrstuvwxyz')
+  for word in wordlist:
+      for i, letter in enumerate(list(word)): # Letter replacement
+          for repletter in letters:
+              neword = list(word)            
+              neword[i] = repletter
+              temp = "".join(neword)
+              if temp in wordict and temp not in wordict[word]:
+                  wordict[word].append(temp)
+      for i in range(len(word)+1): # letter insertion
+          for repletter in letters:
+              neword = list(word)            
+              neword.insert(i, repletter)
+              temp = "".join(neword)
+              if temp in wordict and temp not in wordict[word]:
+                  wordict[word].append(temp)
+      
+  def findpath(word1, word2):
+      stack = deque()
+      stack.append(word1)
+      visitedWords = {word1:1}
+      while 1:
+          if stack:
+              curnode = stack.popleft()
+          else:
+              return None
+          for k in wordict[curnode]:
+              if (k == word2):
+                  m = visitedWords[curnode]
+                  theanswer = [k, curnode]
+                  while m != 1:
+                      theanswer.append(m)
+                      m = visitedWords[m]                    
+                  return theanswer
+              if k not in visitedWords:
+                  visitedWords[k] = curnode
+                  stack.append(k)
+
+  return findpath('a', 'bent')
+
+#+END_SRC
+
+#+RESULTS:
+| bent | ben | be | b | a |
+
