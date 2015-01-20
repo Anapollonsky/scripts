@@ -210,10 +210,9 @@ Visit a node if never visited. Update path. New path will never be shorter than 
 ** Word-neighbors
 You're given two words. Find the shortest path between them, where a single move entails switching a single letter in each word (or inserting one), and each intermediary step must be a valid word. 
 
-This can be made faster by searching from both sides, but building the database of neighbors is overwhelmingly the computationally-intensive part anyway. Also, either I have a limited word list, or the english vocabulary is small; I can't get from baudelaire to a.
-
+First step is generating the neighbors for every word. This script does that, both for the case with only letter-swapping and then with letter-insertion as well. This is then pickled, so it doesn't have to be done again and again while testing.
 #+BEGIN_SRC python
-  from collections import deque
+  import pickle
 
   f = open('wordlist.txt', 'r')
   wordlist = f.readlines()
@@ -232,6 +231,11 @@ This can be made faster by searching from both sides, but building the database 
               temp = "".join(neword)
               if temp in wordict and temp not in wordict[word]:
                   wordict[word].append(temp)
+  pikl_file = open('replacement_wordict.pkl', 'wb') 
+  pickle.dump(wordict, pikl_file)
+  pikl_file.close()
+
+  for word in wordlist:                
       for i in range(len(word)+1): # letter insertion
           for repletter in letters:
               neword = list(word)            
@@ -239,6 +243,29 @@ This can be made faster by searching from both sides, but building the database 
               temp = "".join(neword)
               if temp in wordict and temp not in wordict[word]:
                   wordict[word].append(temp)
+
+  pikl_file = open('replacement_and_insertion_wordict.pkl', 'wb') 
+  pickle.dump(wordict, pikl_file)
+  pikl_file.close()                
+#+END_SRC
+
+#+RESULTS:
+: None
+
+
+This code implements a simple algorithm, which travels in a single direction between two words. It's inefficient, as looking searching for a match from two directions will search exponentially fewer words.
+#+BEGIN_SRC python
+  from collections import deque
+  import pickle
+
+  f = open('wordlist.txt', 'r')                      
+  wordlist = f.readlines()                           
+  wordlist = [x.strip("\n").lower() for x in wordlist]
+  f.close()
+
+  pikl_file = open('replacement_and_insertion_wordict.pkl', 'rb')
+  wordict = pickle.load(pikl_file)
+  pikl_file.close()
       
   def findpath(word1, word2):
       stack = deque()
@@ -267,4 +294,53 @@ This can be made faster by searching from both sides, but building the database 
 
 #+RESULTS:
 | bent | ben | be | b | a |
+
+This script does a similar thing, but instead of working with two words, it works for n words. And it's faster, because it approaches from all sides! Basically, it's looking for the shortest paths to connect all the given words.
+
+#+BEGIN_SRC python
+#!/usr/bin/env python
+from collections import deque
+import pickle
+
+f = open('wordlist.txt', 'r')                      
+wordlist = f.readlines()                           
+wordlist = [x.strip("\n").lower() for x in wordlist]
+f.close()
+
+pikl_file = open('replacement_and_insertion_wordict.pkl', 'rb')
+wordict = pickle.load(pikl_file)
+pikl_file.close()
+
+def findpath_multiple(input_list):
+    visitedwords = [{word: None} for word in input_list]
+    paths = [[] for word in input_list]
+    deques = [deque() for word in input_list]
+    curword = [1 for word in input_list]
+    for k in range(len(deques)):
+        deques[k].append(input_list[k])
+
+    while 1:
+        for commonword in visitedwords[0]:
+            if all([commonword in visitedwords[x] for x in range(0, len(input_list))]):
+                for i, word in enumerate(input_list):
+                    m = commonword
+                    while m != None:
+                        paths[i].append(m)
+                        m = visitedwords[i][m]
+                return(commonword, paths)
+        for i, word in enumerate(input_list):
+            if deques[i]:
+                curword[i] = deques[i].popleft()
+            else:
+                return None
+            for neighbor in wordict[curword[i]]:
+                if neighbor not in visitedwords[i]:
+                    visitedwords[i][neighbor] = curword[i]
+                    deques[i].append(neighbor)
+        
+return(findpath_multiple(['bath', 'kent', 'what']))
+#+END_SRC
+
+#+RESULTS:
+| cast | ((cast cash bash bath) (cast cant cent kent) (cast cost coat chat what)) |
 
