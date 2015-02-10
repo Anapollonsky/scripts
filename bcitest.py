@@ -26,7 +26,7 @@ symbol = {'global': '@GLOBAL'
           ,'reject': '@REJECT'
           }
 
-globalstate = {'wait': None, 'timeout': None, 'expect': [], 'reject': []}
+globalstate = {'wait': .1, 'timeout': 10, 'expect': [], 'reject': []}
 localstatebase =  {'new': None, 'args': None, 'wait': None, 'timeout': None, 'expect': [], 'reject': []}
 
 def sendcommand(connection, command, args):
@@ -98,34 +98,47 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.version:
-        print("bcitest version " + VERSION); 
+        print("bcitest version " + VERSION);
+        
+    board_connect_command = "telnet " + args.board + " " + BCI_PORT
+    con = pexpect.spawn(board_connect_command)
+    con.expect('login')
+    con.sendline('lucent')
+    con.expect('assword')
+    con.sendline('test')
+    con.expect('successful')
 
     infile = open(args.file, 'r')
     reader = csv.reader(infile, delimiter=',', quotechar='|')
     top = None
     mid = None
+    
     for row in reader:
         for word in row:
             if word == symbol['global']:
                 top = symbol['global']
+                mid = None
             if word == symbol['begintest']:
-                top = symbol['begintest']                
+                top = symbol['begintest']
+                mid = None
             elif word == symbol['new']:
                 if mid == symbol['new']:
-                    executecommand(conn, globalstate, localstate)                    
+                    executecommand(conn, globalstate, localstate) 
                 mid = symbol['new']
                 localstate = dict(localstatebase)
             else:
                 if top == symbol['global']:
                     if mid == symbol['wait']:
                         globalstate['wait'] = int(word)
-                    elif  mid == symbol['timeout']:
+                    elif mid == symbol['timeout']:
                         globalstate['timeout'] = int(word)
-                    elif  mid == symbol['expect']:
+                    elif mid == symbol['expect']:
                         globalstate['expect'].append(word)
-                    elif  mid == symbol['reject']:
+                    elif mid == symbol['reject']:
                         globalstate['reject'].append(word)
-                        
+                    elif mid in [symbol['args'], symbol['new']]:
+                        print("Unexpected command execution in global section. Exiting.")
+                        sys.exit()
                 if top == symbol['begintest']:
                     if  mid == symbol['new']:
                         localstate['new'] = word
@@ -139,4 +152,5 @@ if __name__ == "__main__":
                         localstate['expect'].append(word)
                     elif  mid == symbol['reject']:
                         localstate['reject'].append(word)
-            
+    infile.close()
+    conn.close()
