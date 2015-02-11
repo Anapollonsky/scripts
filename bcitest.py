@@ -17,7 +17,7 @@ VERSION  = 1
 BCI_PORT = "7006"
 
 symbol = {'global': '@GLOBAL'
-          ,'begintest': 'BEGINTEST'
+          ,'begintest': '@BEGINTEST'
           ,'new': '@NEW'
           ,'args': '@ARGS'
           ,'wait': '@WAIT'
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
     parser.add_argument("--version", help="print version and exit", action="store_true")
-    # parser.add_argument("board", help="board address")
+    parser.add_argument("board", help="board address")
     parser.add_argument("file", help="bci command list file")
     args = parser.parse_args()
 
