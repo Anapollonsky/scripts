@@ -12,8 +12,9 @@ re.DOTALL # Period in regexes can match any character, including newline.
 
 VERSION  = 3
 BCI_PORT = "7006"
-CSV_DELIMITER =","
+CSV_DELIMITER ="," # 
 TEXT_DELIMITER="\""
+
 # Symbol table allows you to change the key symbols
 symbol = {'global': '@GLOBAL'
           ,'begintest': '@BEGINTEST'
@@ -26,6 +27,8 @@ symbol = {'global': '@GLOBAL'
           }
 tops = ['global', 'begintest'] # Top level tags
 mids = ['new', 'args', 'wait', 'timeout', 'expect', 'reject'] # mid level tags
+
+# Defaults for global and local states
 globalstatebase = {'wait': .1, 'timeout': 10, 'expect': [], 'reject': []}
 localstatebase =  {'new': None, 'args': [], 'wait': None, 'timeout': None, 'expect': [], 'reject': []}
 
@@ -64,7 +67,7 @@ def executecommand(connection, gs, ls, runargs):
     if command == None:
         print("Attempting to execute command with no specified command. Exiting.")
         sys.exit()
-    waitlen = localstate['wait'] or globalstate['wait']    
+    waitlen = localstate['wait'] or globalstate['wait'] 
     timeoutlen = localstate['timeout'] or globalstate['timeout']
     expectlist = localstate['expect'] + globalstate['expect']
     rejectlist = localstate['reject'] + globalstate['reject']
@@ -72,25 +75,26 @@ def executecommand(connection, gs, ls, runargs):
     sendcommand(connection, command, args, runargs)
     resp = parseresponse(connection, expectlist, rejectlist, timeoutlen, waitlen, runargs)
     if resp == "timeoutfail": # Deal with errors
-        print("Command " + command + " with args [" + ' '.join(args) + "] has timed out after" + timeoutlen + " seconds. Exiting.")
+        print("Command \"" + command + "\" with args [" + ' '.join(args) + "] has timed out after" + timeoutlen + " seconds. Exiting.")
         sys.exit()
     elif resp == "unknowncommand":
-        print("Command " + command + " is not available. Exiting.")
+        print("Command \"" + command + "\" is not available. Exiting.")
         sys.exit()        
     elif isinstance(resp, tuple) and resp[0] == "expectfail":
-        print("Command " + command + " with args [" + ' '.join(args) + "] has not captured the expected"
-              + " value " + resp[1] + ".\n")
+        print("Command \"" + command + "\" with args [" + ' '.join(args) + "] has not captured the expected"
+              + " value \"" + resp[1] + "\".\n")
         print("The full captured response is \n" + resp[2])
         print("\nExiting.")
         sys.exit()        
     elif isinstance(resp, tuple) and resp[0] == "rejectfail":
-        print("Command " + command + " with args [" + ' '.join(args) + "] has captured the rejected"
-        " value " + resp[1] + ".\n")
+        print("Command \"" + command + "\" with args [" + ' '.join(args) + "] has captured the rejected"
+        " value \"" + resp[1] + "\".\n")
         print("The full captured response is \n" + resp[2])
         print("\nExiting.")
         sys.exit()        
 
 def update_global_state(global_state, mid, word):
+    """Update the global state."""
     if mid == symbol['wait']:
         global_state['wait'] = float(word)
     elif mid == symbol['timeout']:
@@ -105,6 +109,7 @@ def update_global_state(global_state, mid, word):
         sys.exit()
 
 def update_local_state(local_state, mid, word):
+    """Update the local state."""
     if  mid == symbol['new']:
         local_state['new'] = word
     elif  mid == symbol['args']:
@@ -126,8 +131,7 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--verbose", help="increase output verbosity", default = 0, action="count")
     parser.add_argument("-r", "--repeat", help="set repetitions", default = 1, type=int)
     parser.add_argument("--version", help="print out version and exit",
-                        action='version', version='%(prog)s '
-                        + str(VERSION))
+                        action='version', version='%(prog)s ' + str(VERSION))
     args = parser.parse_args()
 
     for itera in range(args.repeat):
