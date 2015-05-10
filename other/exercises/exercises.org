@@ -1,11 +1,10 @@
 Just some programming exercises.
 * EPI
 ** Stacks & Queues (8)
-4, 8, 14
 
 *** Path Cleaning (8)
 Clean up a path name, dealing with ., .., and // in path names.
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results output
   from collections import deque
 
   def clean_path(pathname):
@@ -26,17 +25,18 @@ Clean up a path name, dealing with ., .., and // in path names.
           stack.append(word)
       return "/".join(stack)
 
-  # return clean_path("scripts//./../scripts/awkscripts/././")
-  return clean_path("/usr/lib/../bin/gcc")
+  print(clean_path("scripts//./../scripts/awkscripts/././"))
+  print(clean_path("/usr/lib/../bin/gcc"))
 
 
 #+END_SRC
 
 #+RESULTS:
+: scripts/awkscripts
 : usr/bin/gcc
 
 *** Queue from Two Stacks (12)
-#+BEGIN_SRC python :results output :tangle yes
+#+BEGIN_SRC python :results output 
   from collections import deque
 
   class stack2q(object):
@@ -70,7 +70,7 @@ Clean up a path name, dealing with ., .., and // in path names.
 
 *** Queue with Max (13)
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results output
   from collections import deque
 
 
@@ -79,16 +79,16 @@ Clean up a path name, dealing with ., .., and // in path names.
           self.valq = deque()
           self.maxq = deque()
           for k in inval:
-              self.enqueue(k)
+              self.enq(k)
 
-      def enqueue(self, value):
+      def enq(self, value):
           self.valq.append(value)
           if self.maxq:
               self.maxq.append(max(value, self.maxq[-1]))
           else:
               self.maxq.append(value)
 
-      def dequeue(self):
+      def deq(self):
           self.maxq.pop()
           return self.valq.pop()
 
@@ -96,13 +96,35 @@ Clean up a path name, dealing with ., .., and // in path names.
           return self.maxq[-1]
 
   test = maxq([1, 2, 3])
+  print(test.get_max())
+  test.enq(5)
+  print(test.get_max())
+  test.enq(2)
+  print(test.get_max())
+  test.enq(7)
+  print(test.get_max())
+  test.deq()
+  print(test.get_max())
+  test.deq()
+  print(test.get_max())
+  test.deq()
+  print(test.get_max())
+  test.deq()
+  print(test.get_max())
 #+END_SRC
 
 #+RESULTS:
-: None
+: 3
+: 5
+: 5
+: 7
+: 5
+: 5
+: 3
+: 2
 
 *** Maximum of a Sliding Window (14)
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results output
   from collections import deque
 
   def window_max(data, window_size):
@@ -126,13 +148,22 @@ Clean up a path name, dealing with ., .., and // in path names.
               max_sum = current_sum
       return max_sum
 
-  data = zip([1, 2, 3, 4, 5, 6, 7, 8, 9], [3, 5, 2, 6, 8, 3, 1, 1, 2])
+  data = list(zip([1, 2, 3, 4, 5, 6, 7, 8, 9], [3, 5, 2, 6, 8, 3, 1, 1, 2]))
       
-  return window_max(data, 3)
+  print(window_max(data, 2))
+  print(window_max(data, 3))
+  print(window_max(data, 4))
+  print(window_max(data, 5))
+  print(window_max(data, 7))
+  
 #+END_SRC
 
 #+RESULTS:
+: 14
 : 17
+: 21
+: 24
+: 28
 
 ** Binary Tree (9)
 *** Check Balance (1)
