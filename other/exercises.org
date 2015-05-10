@@ -35,6 +35,39 @@ Clean up a path name, dealing with ., .., and // in path names.
 #+RESULTS:
 : usr/bin/gcc
 
+*** Queue with Max
+
+#+BEGIN_SRC python
+  from collections import deque
+
+
+  class maxq(object):
+      def __init__(self, inval=[]):
+          self.valq = deque()
+          self.maxq = deque()
+          for k in inval:
+              self.enqueue(k)
+
+      def enqueue(self, value):
+          self.valq.append(value)
+          if self.maxq:
+              self.maxq.append(max(value, self.maxq[-1]))
+          else:
+              self.maxq.append(value)
+
+      def dequeue(self):
+          self.maxq.pop()
+          return self.valq.pop()
+
+      def get_max(self):
+          return self.maxq[-1]
+
+  test = maxq([1, 2, 3])
+#+END_SRC
+
+#+RESULTS:
+: None
+
 *** Maximum of a Sliding Window (14)
 #+BEGIN_SRC python
   from collections import deque
