@@ -1,4 +1,75 @@
 Just some programming exercises.
+* EPI
+** Stacks & Queues 
+4, 8, 14
+
+*** Path Cleaning (8)
+Clean up a path name, dealing with ., .., and // in path names.
+#+BEGIN_SRC python
+  from collections import deque
+
+  def clean_path(pathname):
+      stack = deque()
+      word = ""
+      for char in pathname:
+          if char == "/":
+              if word == "." or word == "":
+                  pass
+              elif word == "..":
+                  stack.pop()
+              else:
+                  stack.append(word)
+              word = ""
+          else:
+              word = word + char
+      if word:
+          stack.append(word)
+      return "/".join(stack)
+
+  # return clean_path("scripts//./../scripts/awkscripts/././")
+  return clean_path("/usr/lib/../bin/gcc")
+
+
+#+END_SRC
+
+#+RESULTS:
+: usr/bin/gcc
+
+*** Maximum of a Sliding Window
+
+** Binary Tree (9)
+*** Check Balance (1)
+#+BEGIN_SRC python
+  class Tree:
+
+
+      def __init__(self):
+          self.root = []
+
+      def get_child(self, index):
+          return self.root[index]
+
+      def follow_path(self, path):
+          temp = self.root
+          for k in path:
+              temp = temp[k]
+          return temp
+
+      def is_balanced(self):
+          def helper(self, node):
+              if not node:
+                  return 0
+              else:
+                  themin, themax = 0, 0
+                  for k in node:
+                      
+                  return min()
+              
+          for k in self.root:
+              
+      
+
+#+END_SRC
 * Trees
 ** Building tree from inorder and postorder.
 Assignment: 
