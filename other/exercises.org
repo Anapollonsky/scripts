@@ -1,6 +1,6 @@
 Just some programming exercises.
 * EPI
-** Stacks & Queues 
+** Stacks & Queues (8)
 4, 8, 14
 
 *** Path Cleaning (8)
@@ -35,7 +35,38 @@ Clean up a path name, dealing with ., .., and // in path names.
 #+RESULTS:
 : usr/bin/gcc
 
-*** Maximum of a Sliding Window
+*** Maximum of a Sliding Window (14)
+#+BEGIN_SRC python
+  from collections import deque
+
+  def window_max(data, window_size):
+      """Find maximum of sliding window, assume data is list of 2-ples"""
+      actual_size = 0
+      max_sum = 0
+      current_sum = 0
+      queue = deque()
+
+      for k in data:
+          if actual_size < window_size:
+              queue.append(k)
+              actual_size += 1
+              current_sum += k[1]
+              if current_sum > max_sum:
+                  max_sum = current_sum
+              continue
+          queue.append(k)
+          current_sum = current_sum + k[1] - queue.popleft()[1]
+          if current_sum > max_sum:
+              max_sum = current_sum
+      return max_sum
+
+  data = zip([1, 2, 3, 4, 5, 6, 7, 8, 9], [3, 5, 2, 6, 8, 3, 1, 1, 2])
+      
+  return window_max(data, 3)
+#+END_SRC
+
+#+RESULTS:
+: 17
 
 ** Binary Tree (9)
 *** Check Balance (1)
