@@ -35,7 +35,40 @@ Clean up a path name, dealing with ., .., and // in path names.
 #+RESULTS:
 : usr/bin/gcc
 
-*** Queue with Max
+*** Queue from Two Stacks (12)
+#+BEGIN_SRC python :results output :tangle yes
+  from collections import deque
+
+  class stack2q(object):
+
+      def __init__(self, vals=[]):
+          self.stack1 = deque()
+          self.stack2 = deque()
+          for k in vals:
+              self.enq(k)
+
+      def enq(self, value):
+          while self.stack1:
+              self.stack2.append(self.stack1.pop())
+          self.stack1.append(value)
+          while self.stack2:
+              self.stack1.append(self.stack2.pop())
+
+      def deq(self):
+          return self.stack1.pop()
+
+  test = stack2q([1, 2, 3, 4])
+  print(test.deq())
+  print(test.deq())
+  print(test.deq())
+#+END_SRC
+
+#+RESULTS:
+: 1
+: 2
+: 3
+
+*** Queue with Max (13)
 
 #+BEGIN_SRC python
   from collections import deque
