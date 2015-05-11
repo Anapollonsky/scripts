@@ -167,16 +167,18 @@ Clean up a path name, dealing with ., .., and // in path names.
 ** Binary Tree (9)
 *** Basic tree implementation
 #+BEGIN_SRC python :results output :tangle tree.py
+  from copy import deepcopy
 
   class tree(object):
       """ Simple tree implementation, where a tree is a list of lists (of lists), leaves are
       lists with a single entry, and any subsequent entries represent children."""
-      def __init__(self, rootval, children=[], parent):
+      def __init__(self, rootval, children=[]):
           if isinstance(rootval, list):
               self.value = rootval[0]
               self.children = []
               for k in rootval[1:]:
-                  self.add_child(tree(k))
+                  if k:
+                      self.add_child(tree(k))
           else:
               self.value = rootval
               self.children = children
@@ -192,9 +194,6 @@ Clean up a path name, dealing with ., .., and // in path names.
 
       def get_child(self, num):
           return self.children[num]
-
-      def get_num_children(self):
-          return len(self.children)
 
       def get_children(self):
           return self.children
@@ -219,7 +218,8 @@ Clean up a path name, dealing with ., .., and // in path names.
               self.value = rootval[0]
               self.children = []
               for k in rootval[1:]:
-                  self.add_child(binary_tree(k))
+                  if k:
+                      self.add_child(binary_tree(k))
           else:
               self.value = rootval
               self.children = children
@@ -268,17 +268,35 @@ Clean up a path name, dealing with ., .., and // in path names.
                       and symmetric_helper(left_node.right(), right_node.left()))
           return symmetric_helper(self.left(), self.right())
 
-      ## 9.6
+      ## 9.7 reconstruct from inorder and preorder or postorder
+      @staticmethod
+      def rec_inord_preord(inorder, preorder):
+          if len(inorder) == 0:
+              return None
+          rootindex = inorder.index(preorder[0])
+          root = binary_tree(preorder[0])
+          leftroot = binary_tree.rec_inord_preord(inorder[:rootindex], preorder[1:1+rootindex])
+          # print(leftroot)
+          root.add_child(leftroot)
+          root.add_child(binary_tree.rec_inord_preord(inorder[rootindex+1:], preorder[rootindex+1:]))
+          return root
 
-      
   testtree = binary_tree([3, [1, [2, [3, [4]]]], [3, [2], [3]]])
   balanced_tree = binary_tree([3, [2, [1], [3]], [2, [3], [3]]])
   symmetric_tree = binary_tree([3, [2, [3], [2]], [2, [2], [3]]])
-  print(testtree.get_depths())
-  print(testtree.is_balanced())
-  print(balanced_tree.is_balanced())
-  print(testtree.is_symmetric())
-  print(symmetric_tree.is_symmetric())
+  # print(testtree.get_depths())
+  # print(testtree.is_balanced())
+  # print(balanced_tree.is_balanced())
+  # print(testtree.is_symmetric())
+  # print(symmetric_tree.is_symmetric())
+
+  chartree = binary_tree(['H', ['B', ['F', None, None], ['E', ['A', None, None], None]], ['C', None, ['D', None, ['G', ['I', None, None], None]]]])
+  chartree_inorder = ['F', 'B', 'A', 'E', 'H', 'C', 'D', 'I', 'G']
+  chartree_preorder = ['H', 'B', 'F', 'E', 'A', 'C', 'D', 'G', 'I']
+  nc = binary_tree.rec_inord_preord(chartree_inorder, chartree_preorder)
+  print("test2")
+  # print(chartree.to_list())
+  # print(nc.children)
 
 #+END_SRC
 
