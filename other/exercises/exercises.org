@@ -165,9 +165,10 @@ Clean up a path name, dealing with ., .., and // in path names.
 : 28
 
 ** Binary Tree (9)
-*** Basic tree implementation
+*** Binary Tree Problems 
 #+BEGIN_SRC python :results output :tangle tree.py
   from copy import deepcopy
+  from collections import deque
 
   class tree(object):
       """ Simple tree implementation, where a tree is a list of lists (of lists), leaves are
@@ -216,10 +217,12 @@ Clean up a path name, dealing with ., .., and // in path names.
       def __init__(self, rootval, children=[]):
           if isinstance(rootval, list):
               self.value = rootval[0]
-              self.children = [binary_tree(x) if x else x for x in rootval[1:]] + [None for x in range(2-len(rootval[1:]))]
+              self.children = [binary_tree(x) if x else x for x in rootval[1:]
+              ] + [None for x in range(2-len(rootval[1:]))]
           else:
               self.value = rootval
-              self.children = children
+              self.children = children + [None for x in range(2-len(children))]
+
 
       def get_left(self):
           return self.children[0]
@@ -292,17 +295,86 @@ Clean up a path name, dealing with ., .., and // in path names.
               left.append(k)
               if ncount == tcount * 2 - (tcount - 1):
                   right = preorder[i+2:]
-                  print (left, right)
                   break
-          print(preorder[0])
-          print(preorder)
           root = binary_tree(preorder[0])
           if root:
-              print("yay")
               root.set_left(binary_tree.null_reconstruct_preorder(left))
-              print("test")
               root.set_right(binary_tree.null_reconstruct_preorder(right))
           return root
+
+      ## 9.9 Form linked list from leaf nodes of tree
+      def linked_list_from_leaves(node):
+          linked_list = []
+          if node.get_left():
+              linked_list += binary_tree.linked_list_from_leaves(node.get_left())
+          if node.get_right():
+              linked_list += binary_tree.linked_list_from_leaves(node.get_right())
+          if not (node.get_left() or node.get_right()):
+              linked_list.append(node.get_val())
+          return linked_list
+
+      # ## 9.10 Print exterior of binary tree in anti-clockwise: nodes on
+      # ## path to leftmost leaf, then leaves left-right, then nodes of rightmost
+      # ## to root
+
+      # # Assuming that going left/right until first leaf matches definition; unclear
+      # def binary_tree_exterior(node):
+      #     def print_left_anticlockwise(node):
+      #         the_list = [node.get_val()]
+      #         if node.get_left():
+      #             the_list += print_left_anticlockwise(node.get_left)
+      #         elif node.get_right():
+      #             the_list += print_left_anticlockwise(node.get_right)
+      #         return the_list
+
+      #     def print_left_anticlockwise(node):
+      #         the_list = [node.get_val()]
+      #         if node.get_left():
+      #             the_list += print_left_anticlockwise(node.get_left)
+      #         elif node.get_right():
+      #             the_list += print_left_anticlockwise(node.get_right)
+      #         return the_list
+
+      ## 9.11 Lowest common ancestor
+      # Assumes values are unique
+      def lowest_common_ancestor(root, vals):
+
+          # Breadth-first search
+          def lca_helper(root, queue):
+              if root.get_left():
+                  queue.append(root.get_left())
+                  ancestry[root.get_left().get_val()] = root
+              if root.get_right():
+                  queue.append(root.get_right())
+                  ancestry[root.get_right().get_val()] = root
+
+          # Keep track of history for path recreation
+          queue = deque()
+          ancestry = {root.get_val(): None}
+          lca_helper(root, queue)
+          while queue and not all([x in ancestry for x in vals]):
+              # print(visited_queue, vals)
+              curnode = queue.popleft()
+              lca_helper(curnode, queue)
+
+          # Generate paths out of node path history
+          paths = {}
+          for k in vals:
+              paths[k] = []
+              ancestry_pather = k
+              while ancestry_pather:
+                  paths[k].append(ancestry_pather)
+                  if ancestry[ancestry_pather]:
+                      ancestry_pather = ancestry[ancestry_pather].get_val()
+                  else:
+                      ancestry_pather = None
+          # Go through paths, looking for earliest common member
+          for path in paths:
+              for path_member in paths[path]:
+                  if all([path_member in paths[x] for x in paths]):
+                      return path_member
+          # Doesn't exist
+          return None
 
   testtree = binary_tree([3, [1, [2, [3, [4]]]], [3, [2], [3]]])
   balanced_tree = binary_tree([3, [2, [1], [3]], [2, [3], [3]]])
@@ -314,28 +386,254 @@ Clean up a path name, dealing with ., .., and // in path names.
   # print(symmetric_tree.is_symmetric())
 
   chartree = binary_tree(['H', ['B', ['F', None, None], ['E', ['A', None, None], None]], ['C', None, ['D', None, ['G', ['I', None, None], None]]]])
-  # chartree_inorder = ['F', 'B', 'A', 'E', 'H', 'C', 'D', 'I', 'G']
-  # chartree_preorder = ['H', 'B', 'F', 'E', 'A', 'C', 'D', 'G', 'I']
+  chartree_inorder = ['F', 'B', 'A', 'E', 'H', 'C', 'D', 'I', 'G']
+  chartree_preorder = ['H', 'B', 'F', 'E', 'A', 'C', 'D', 'G', 'I']
   # nc = binary_tree.reconstruct_inorder_preorder(chartree_inorder, chartree_preorder)
   # print(chartree.to_list())
   # print(nc)
 
-  chartree_preorder_marked = ['H', 'B', 'F', None, None, 'E', 'A',
-                              None, None, None, 'C', None, 'D',
-                              None, 'G', 'I', None, None, None]
-  print(chartree)
-  print(binary_tree.null_reconstruct_preorder(chartree_preorder_marked))
+  # chartree_preorder_marked = ['H', 'B', 'F', None, None, 'E', 'A',
+  #                             None, None, None, 'C', None, 'D',
+  #                             None, 'G', 'I', None, None, None]
+  # print(chartree)
+  # print(binary_tree.null_reconstruct_preorder(chartree_preorder_marked))
+
+  # print (binary_tree.linked_list_from_leaves(chartree))
+  print(binary_tree.lowest_common_ancestor(chartree, ['B', 'D']))
+  print(binary_tree.lowest_common_ancestor(chartree, ['I', 'D', 'G']))
 #+END_SRC
 
 #+RESULTS:
-: [0, 1, 2, 3, 4, 1, 2, 2]
-: 2
-: 2
+: H
+: D
 
 ** Heap (10)
 #+BEGIN_SRC python :results output
 
 #+END_SRC
+** Hash Table (11)
+*** Closest equal entries in list (12.3)
+#+BEGIN_SRC python
+  from collections import defaultdict
+
+  s = ["all", "work", "and", "no", "play", "makes", "for", "no", "work", "no", "fun", "and", "no", "results"]
+  def closest_pairs(inlist):
+      the_dict = defaultdict(list)
+      for i, k in enumerate(inlist):
+          the_dict[k].append[i]
+          min_distance = 9999999
+          match_list = []
+      for k in the_dict:
+          leng = len(the_dict[k])
+          if leng > 2:
+              current_distance = min([b - a for a, b in zip(k[:-1], k[1:])])
+              if current_distance < min_distance:
+                  min_distance = current_distance
+                  match_list = []
+              elif current_distance == min_distance:
+                  match_list
+                  
+
+
+#+END_SRC
+** Meta-algorithms (15)
+*** Mergesort
+#+BEGIN_SRC python :output results :tangle mergesort.py
+  from collections import deque
+
+  vals = [1, 4, 2, 67, 8, 3, 4, 7, 4]
+
+  def mergesort(vals):
+      if len(vals) < 2:
+          return vals
+      mid = int(len(vals)/2)
+      left = deque(mergesort(vals[:mid]))
+      right = deque(mergesort(vals[mid:]))
+      out = []
+      while left or right:
+          if left and right:
+              if left[0] < right[0]:
+                  out.append(left.popleft())
+              else:
+                  out.append(right.popleft())
+          elif left:
+              out.append(left.popleft())
+          elif right:
+              out.append(right.popleft())
+      return out
+
+  print(mergesort(vals))
+
+
+      
+
+#+END_SRC
+
+#+RESULTS:
+: None
+
+*** Skyline Drawing (1)
+#+BEGIN_SRC python
+  from collections import namedtuple
+
+  building = namedtuple('building', ['left', 'right', 'height'])
+
+  buildings = [building(1, 3, 3), building(2, 4, 2), building(3, 5, 5)]
+
+  corners = {}
+
+  for building in buildings:
+      
+#+END_SRC
+
+*** Counting Inversions (2)
+Array A of n numbers, returns number of pairs of indicies so that i < j and A[i] and A[j]
+#+BEGIN_SRC python :results output
+  A = [3, 8, 2, 4, 6, 3]
+
+  ## Basic, n^2
+  def count_inv1(A):
+      sum = 0
+      for i, num1 in enumerate(A):
+          for k, num2 in enumerate(A):
+              if i < k and num1 > num2:
+                  sum += 1
+      return sum
+
+  ## Mergesort-like, nlogn
+  def count_inv2(A):
+      if len(A) < 5:
+          return count_inv1(A) 
+      mid = int(len(A)/2)
+      left = count_inv2(A[:mid])
+      right = count_inv2(A[mid:])
+      sum = left + right
+      for a in A[:mid]:
+          for b in A[mid:]:
+              if a > b:
+                  sum += 1
+      return sum
+
+  print(count_inv2(A))
+      
+#+END_SRC
+
+#+RESULTS:
+: 7
+
+*** Nearest Points in the Plane (3)
+#+BEGIN_SRC python :results output
+  from collections import namedtuple
+
+  p = namedtuple('p', ['x', 'y'])
+  sol = namedtuple('sol', ['p1', 'p2', 'dist'])
+
+  points = [p(1, 3), p(4, 2), p(8, 3), p(5, 5), p(3, 5)]
+
+  def find_minimum_distance(points):
+      def distance(p1, p2):
+           return ((p2.x - p1.x)**2 + (p2.y - p1.y)**2)
+
+      def brute_force(points):
+          bestsol = sol(None, None, 9999999)
+          for i, a in enumerate(points):
+              for b in points[i:]:
+                  if a != b and distance(a, b) < bestsol.dist:
+                      bestsol = sol(a, b, distance(a, b))
+          return bestsol
+
+      # Handle few points
+      if len(points) < 7:
+          return brute_force(points)
+
+      points = points.sort(key=lambda x: x.y)
+
+      mid = int(len(points)/2)
+      left = [x for x in points[:mid]]
+      right = [x for x in points[mid:]]
+      sol_left = find_minimum_distance(left)
+      sol_right = find_minimum_distance(right)
+      min_sol = min(sol_left, sol_right, key=lambda x: x.dist)
+      # Look at overlaps
+      center_y = points[mid].y
+      overlap_points = [x for x in points if
+                        x.y < center_y + min_sol.dist or
+                        x.y > center_y - min_sol.dist]
+
+      best_overlap = brute_force(overlap_points)
+      return min(min_sol, best_overlap, key=sol.dist)
+
+  print(find_minimum_distance(points))
+#+END_SRC
+
+#+RESULTS:
+: sol(p1=p(x=5, y=5), p2=p(x=3, y=5), dist=4)
+
+*** Longest nondecreasing subsequence(6)
+#+BEGIN_SRC python
+  A = [1, 5, 3, 6, 7, 8, 3, 4, 9, 3]
+
+
+
+#+END_SRC
+** Graph (16)
+*** Quickest Route (10)
+Flight = (start time, originating city, destination city, arrival time). Daily. 60 minutes to transfer. Compute fastest from a to b.
+#+BEGIN_SRC python :results output :tangle flights_shortest_time.py
+  from collections import namedtuple, defaultdict, deque
+
+
+  # Will be assuming that times are from 0-100, with stopover time being 10. Cities are strings.
+
+  city = namedtuple("city", ["name", "flights"])
+  flight = namedtuple("flight", ["tstart", "tstop", "cstart", "cstop"])
+  pathnode = namedtuple("pathnode", ["last", "time"])
+
+  a = city('a', [])
+  b = city('b', [])
+  c = city('c', [])
+
+  flights = [flight(10, 40, a, b),
+             flight(55, 80, b, c),
+             flight(40, 90, a, c)]
+
+  for flight in flights:
+      flight.cstart.flights.append(flight)
+
+  def shortest_path(citya, cityb):
+      shortest_paths = {citya.name: pathnode(None, 0)}
+      queue = deque()
+      queue.append(citya)
+
+      while queue:
+          print(shortest_paths)
+          latest = queue.pop()
+          if latest == cityb:
+              path = [latest]
+              parent = shortest_paths[latest.name].last
+              while(parent):
+                  path.append(parent)
+                  parent = shortest_path[parent.name]
+              return path
+          arrive_time = shortest_paths[latest.name].time % 100
+          for flight in latest.flights:
+              if arrive_time + 10 < flight.tstart:
+                  best_time = flight.tstop
+              else:
+                  best_time = flight.tstop + 100
+              if (flight.cstop.name in shortest_paths and
+                      best_time < shortest_paths[flight.cstop.name]):
+                  shortest_paths[flight.cstop.name] = pathnode(latest, best_time)
+              elif flight.cstop.name not in shortest_paths:
+                  shortest_paths[flight.cstop.name] = pathnode(latest, best_time)
+                  queue.append(flight.cstop)
+  print(shortest_path(a, b))
+          
+       
+#+END_SRC
+
+#+RESULTS:
+
 * Trees
 ** Building tree from inorder and postorder.
 Assignment: 
@@ -431,7 +729,6 @@ Tries to find the closest common ancestor in a tree between a list of values. Li
 #+END_SRC
 
 #+RESULTS:
-: c
 
 *** BST, two common values
 Assumes tree is a BST, only takes two values.
