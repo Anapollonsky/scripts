@@ -221,12 +221,7 @@ Many problems in the code-block below, due to the reliance on the same tree clas
               self.value = rootval[0]
               self.children = [binary_tree(x) if x else x for x in rootval[1:]
               ] + [None for x in range(2-len(rootval[1:]))]
-          else:
-              self.value = rootval
-              self.children = children + [None for x in range(2-len(children))]
-
-
-      def get_left(self):
+          els(self):
           return self.children[0]
 
       def get_right(self):
@@ -457,15 +452,15 @@ Many problems in the code-block below, due to the reliance on the same tree clas
               self.left = left
               self.right = right
 
-      
+
       def __repr__(self):
           return str([self.value, self.left, self.right])
 
       # 1
       # Verify that a tree is a BST
       def is_bst(self):
-          left = (self.left.is_bst() and (self.value > self.left.value)) if self.left else True 
-          right = (self.right.is_bst() and (self.value < self.right.value)) if self.right else True
+          left = (self.left.is_bst() and (self.value >= self.left.value)) if self.left else True
+          right = (self.right.is_bst() and (self.value <= self.right.value)) if self.right else True
           return left and right
 
       # 2
@@ -482,7 +477,7 @@ Many problems in the code-block below, due to the reliance on the same tree clas
           up = self.parent
           while up:
               if up.value > self.value:
-                  return up            
+                  return up
               up = up.parent
           return None
 
@@ -505,14 +500,18 @@ Many problems in the code-block below, due to the reliance on the same tree clas
       def search_recursive(self, value):
           if value < self.value:
               if self.left:
-                  return self.left.search(value)
+                  return self.left.search_recursive(value)
               else:
                   return None
           elif value == self.value:
-              return self
+              # Slightly make sure that earliest in-order node is returned
+              if self.left and self.left.value == value:
+                  return self.left.search_recursive(value)
+              else:
+                  return self
           elif value > self.value:
               if self.right:
-                  return self.right.search(value)
+                  return self.right.search_recursive(value)
               else:
                   return None
 
@@ -522,20 +521,72 @@ Many problems in the code-block below, due to the reliance on the same tree clas
               if current.value > value:
                   current = current.left
               elif current.value == value:
-                  return current
+                  if current.left and current.left.value == value:
+                      current = current.left
+                  else:
+                      return current
               elif current.value < value:
                   current = current.right
           return None
-          
-      
-                  
+
+      # 5 First key larger than k:
+      def search_larger(self, value):
+          current = self
+          bestans = None
+          while current:
+              if current.value > value: # Check if answer is better
+                  if not bestans or current.value < bestans.value:
+                      bestans = current
+              if current.right and current.value < value: # Too low
+                  current = current.right
+              elif current.left: # Try and go left
+                  current = current.left
+              else: # Try and go right
+                  current = current.right
+          return bestans
+
+      # 6 Min-First BST: Search
+      def mf_search(self, value):
+          if self.value == value:
+              return self
+          elif self.left and ((self.right and value < self.right.value) or not self.right):
+              return self.left.mf_search(value)
+          elif self.right and value > self.right.value:
+              return self.right.mf_search(value)
+          else:
+              return None
+
+      # 7 BST From Sorted Array
+      @staticmethod
+      def list_to_BST(ins):
+          if len(ins) == 1:
+              return node(ins[0])
+          if len(ins) == 2:
+              return node(ins[1], node(ins[0]))
+          midpt = int(len(ins)/2)
+          return node(ins[midpt], node.list_to_BST(ins[:midpt]), node.list_to_BST(ins[midpt+1:]))
+
+      @staticmethod
+      def linked_list_to_BST
+
 
   test_bst = node([5, [1], [7]])
   test_bst_2 = node([5, [2, [1]], [7, None, [9]]])
-  test_bst_3 = node([108, [108, [-10, [-14], [2]], [108]], [285, [243], [285,
+  bst_141 = node([19, [7,
+                      [3, [2], [5]],
+                      [11, None, [17, [13]]]],
+                     [43,
+                      [23,
+                       None,
+                       [37, [29, None, [31]], [41]]],
+                      [47,
+                       None, [53]]]])
+  bst_142 = node([108, [108, [-10, [-14], [2]], [108]], [285, [243], [285,
                                                                          None, [401]]]])
-  bsts = [test_bst, test_bst_2, test_bst_3]
+  bsts = [test_bst, test_bst_2]
 
+
+  mf_143 = node([2, [3, None, [5, [7, [11]]]], [13, [17], [19, [23]]]])
   def test_is_bst(bsts):
       for bst in bsts:
           assert bst.is_bst()
@@ -544,16 +595,32 @@ Many problems in the code-block below, due to the reliance on the same tree clas
       assert bsts[0].left.successor().value == 5
       assert bsts[1].right.successor().value == 9
 
-  def test_search(bsts):
-      for func in [search_recursive, search_iterative]:
-          assert bsts[2].func(108) == bsts[2].left
-          assert bsts[2].func(285) == bsts[2].right
-          assert bsts[2].func(143) == None
-  print(bsts[2].search_iterative(108))
+  def test_search():
+      assert bst_142.search_iterative(108) == bst_142.left
+      assert bst_142.search_iterative(285) == bst_142.right
+      assert bst_142.search_iterative(143) == None
+      assert bst_142.search_recursive(108) == bst_142.left
+      assert bst_142.search_recursive(285) == bst_142.right
+      assert bst_142.search_recursive(143) == None
 
-  test_is_bst(bsts)
+  def test_search_larger():
+      assert bst_141.search_larger(23) == bst_141.right.left.right.left
+
+  def test_mf_search():
+      assert not mf_143.mf_search(12)
+      assert not mf_143.mf_search(97)
+      assert mf_143.mf_search(11)
+      assert mf_143.mf_search(3)
+
+  def test_create_BST():
+      assert node.list_to_BST(sorted([1, 4, 6, 3, 4, 87, 9, 3])).is_bst()
+
+  test_is_bst([test_bst, test_bst_2, bst_141, bst_142])
   test_successor(bsts)
-
+  test_search()
+  test_search_larger()
+  test_mf_search()
+  test_create_BST()
 #+END_SRC
 ** 15 Meta-algorithms
 *** DONE Mergesort
