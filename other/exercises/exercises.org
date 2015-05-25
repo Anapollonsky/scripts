@@ -439,6 +439,7 @@ Clean up a path name, dealing with ., .., and // in path names.
 ** Meta-algorithms (15)
 *** DONE Mergesort
 CLOSED: [2015-05-24 Sun 14:30]
+Personal mergesort implementation. 
 #+BEGIN_SRC python :output results :tangle mergesort.py
   from collections import deque
 
@@ -474,6 +475,8 @@ CLOSED: [2015-05-24 Sun 14:30]
 : None
 
 *** DONE Skyline Drawing (1)
+'Draw' a skyline given a collection of buildings described by leftx, rightx, and height coordinates. Implementation
+changes the list into a list of non-overlapping sections, first in n**2 and then in nlogn time.
 CLOSED: [2015-05-24 Sun 14:30]
 #+BEGIN_SRC python :results output
   from collections import namedtuple
@@ -552,7 +555,7 @@ CLOSED: [2015-05-24 Sun 14:30]
 
 *** DONE Counting Inversions (2)
 CLOSED: [2015-05-24 Sun 14:30]
-Array A of n numbers, returns number of pairs of indicies so that i < j and A[i] and A[j]
+Array A of n numbers, returns number of pairs of indicies so that i < j and A[i] and A[j]. nlogn
 #+BEGIN_SRC python :results output
   A = [3, 8, 2, 4, 6, 3]
 
@@ -588,6 +591,7 @@ Array A of n numbers, returns number of pairs of indicies so that i < j and A[i]
 
 *** DONE Nearest Points in the Plane (3)
 CLOSED: [2015-05-24 Sun 14:30]
+Find the nearest points in a plane, preferably without comparing every single pair.
 #+BEGIN_SRC python :results output
   from collections import namedtuple
 
@@ -637,6 +641,7 @@ CLOSED: [2015-05-24 Sun 14:30]
 
 *** DONE Tree Diameter (4)  
 CLOSED: [2015-05-24 Sun 14:30]
+Find the diameter of a tree. It's the maximum distance from one node to another
 #+BEGIN_SRC python
   from collections import namedtuple
 
@@ -668,6 +673,7 @@ CLOSED: [2015-05-24 Sun 14:30]
   print(find_perimeter(b))
 #+END_SRC
 *** TODO Longest nondecreasing subsequence(6)
+Longest nondecreasing subsequence of a sequence. Doesn't have to be contiguous
 
 
 #+BEGIN_SRC python :results output
@@ -685,6 +691,7 @@ CLOSED: [2015-05-24 Sun 14:30]
           
 #+END_SRC
 *** TODO Longest subarray where sum <= k (7)
+Longest sequence the sum of which is under the cap. 
 #+BEGIN_SRC python :results output
   from collections import deque, namedtuple
   from itertools import accumulate
@@ -739,6 +746,7 @@ CLOSED: [2015-05-24 Sun 14:30]
   print(longest_subarray_capped_sum2(array, 184))
 #+END_SRC
 *** TODO Levenshtein Distance (11)
+Algorithm to find 'distance' between two strings, measured in insertion, deletion and replacement operations.
 #+BEGIN_SRC python :results output
 
 
@@ -748,13 +756,11 @@ CLOSED: [2015-05-24 Sun 14:30]
           
 #+END_SRC
 ** Graph (16)
-*** Transform one string into another(2)
+*** DONE Transform one string into another(2)
+CLOSED: [2015-05-24 Sun 20:45]
+Find the shortest paths to connect a list of words using a given dictionary. Can either only use replacements, or include off-by-1 character insertions/deletions. Bytearrays used for efficiency of single-character operations (they're mutable). 
 #+BEGIN_SRC python :results output
   from collections import deque
-
-  ## Find the shortest paths to connect a list of words using a given dictionary.
-  ## Can either only use replacements, or include off-by-1 character insertions/deletions
-  ## Bytearrays used for efficiency of single-character operations (they're mutable)
 
   # 'words' is assumed to be input file of words separated by newlines. Imported here
   f = open('words', 'r')
@@ -783,7 +789,7 @@ CLOSED: [2015-05-24 Sun 14:30]
       mworddict = {word: {word: None} for word in words}
       mqueue = {word: deque([bytearray(word)]) for word in words}
 
-      for x in range(100):
+      while(1):
           new_words = set()        
           for word in words:
               try:
@@ -828,9 +834,18 @@ CLOSED: [2015-05-24 Sun 14:30]
       
 
 #+END_SRC
+
+#+RESULTS:
+: {'cat': ['cat', 'hat'], 'hearse': ['hearse', 'hears', 'hearts', 'hearth', 'heath', 'heat', 'hat'], 'what': ['what', 'hat']}
+: {'when': ['when', 'whet'], 'what': ['what', 'whet']}
+
+*** Extended Contacts (5)
+#+BEGIN_SRC python :results output
+
+#+END_SRC
 *** DONE Quickest Route (10)
 CLOSED: [2015-05-24 Sun 18:55]
-Flight = (start time, originating city, destination city, arrival time). Daily. 60 minutes to transfer. Compute fastest from a to b.
+Flight = (start time, originating city, destination city, arrival time). Daily. 60 minutes to transfer. Compute fastest from city a to city b.
 #+BEGIN_SRC python :results output :tangle flights_shortest_time.py
   from collections import namedtuple, defaultdict, deque
 
