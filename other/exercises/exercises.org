@@ -436,6 +436,8 @@ Many problems in the code-block below, due to the reliance on the same tree clas
 #+END_SRC
 ** 14 Binary Search Tree
 #+BEGIN_SRC python :results output
+  from itertools import takewhile
+
   class node:
       def __init__(self, value, left=None, right=None, parent=None):
           if isinstance(value, list):
@@ -566,10 +568,105 @@ Many problems in the code-block below, due to the reliance on the same tree clas
           midpt = int(len(ins)/2)
           return node(ins[midpt], node.list_to_BST(ins[:midpt]), node.list_to_BST(ins[midpt+1:]))
 
+      # 8 BST From Sorted Linked List
+      # @staticmethod
+      # def linked_list_to_BST(ins):
+
+      # 9 BST to Sorted Doubly Linked List
+
+      # Some LL operations. These are here implemented in linear time,
+      # in an actual class they can be implemented in constant time.
+      def head(self):
+          current = self
+          while current.left:
+              current = current.left
+          return current
+
+      def tail(self):
+          current = self
+          while current.right:
+              current = current.right
+          return current
+      
       @staticmethod
-      def linked_list_to_BST
+      def BST_to_linked_list(node):
+          if node.left:
+              left = node.BST_to_linked_list(node.left)[1]
+              left.right = node
+              node.left = left
+          if node.right:
+              right = node.BST_to_linked_list(node.right)[0]
+              right.left = node
+              node.right = right
+          return (node.head(), node.tail())
 
+      @staticmethod
+      def string_linked_list(head):
+          """Because a linked list isn't a class and __repr__ isn't overloaded,
+          it can't be directly printed due to any two neighboring nodes containing
+          recursive references to each other."""
+          accustr = "%d " % head.value
+          while head.right:
+              head = head.right
+              accustr += "%d " % head.value
+          return accustr
 
+      # 11 Find k largest elements in a BST
+      def largest_elements(self, num):
+          total = [] 
+          if self.right:
+              total = self.right.largest_elements(num)
+          if len(total) < num:
+              total = [self.value] + total
+          if len(total) < num and self.left:
+              total = self.left.largest_elements(num - len(total)) + total
+          return total[-num:]
+
+      # 12 BST recreation from only preorder. Trivial, just left head = last
+      # instead of first.
+      @staticmethod
+      def BST_from_preorder(preorder):
+          if preorder == []:
+              return None
+          head = preorder[0]
+          left = node.BST_from_preorder([x for x in preorder[1:] if x < head])
+          right = node.BST_from_preorder([x for x in preorder[1:] if x >= head])
+          return node(head, left, right)
+
+      # 13 Lowest common ancestor assuming unique indices
+      def lowest_common_ancestor(self, a, b):
+          a, b = min(a, b), max(a, b)
+          # self.left has to exist if this condition holds and a and b exist
+          if b < self.value:
+              return self.left.lowest_common_ancestor(a, b)
+          elif a > self.value:
+              return self.right.lowest_common_ancestor(a, b)
+          else:
+              return self
+
+      # 14 Descendant and ancestor
+      def descendant_and_ancestor(self, m, aset):
+          current = self
+          target = m
+          while current.left or current.right:
+              # If met, False if exactly one value hasn't been removed from set
+              if current.value == m:
+                  if len(aset) != 1:
+                      return False
+                  target = aset[0] # Now looking for remaining aset member, not m
+              # If in aset, remove from aset
+              elif current.value in aset:
+                  aset.remove(current.value)
+              #  If aset empty, True
+              if not aset:
+                  return True
+              # Navigate down
+              elif current.value > target and current.left:
+                  current = current.left
+              elif current.value <= target and current.right:
+                  current = current.right
+          return False
+                  
   test_bst = node([5, [1], [7]])
   test_bst_2 = node([5, [2, [1]], [7, None, [9]]])
   bst_141 = node([19, [7,
@@ -582,11 +679,13 @@ Many problems in the code-block below, due to the reliance on the same tree clas
                       [47,
                        None, [53]]]])
   bst_142 = node([108, [108, [-10, [-14], [2]], [108]], [285, [243], [285,
-                                                                         None, [401]]]])
+                  None, [401]]]])
   bsts = [test_bst, test_bst_2]
 
-
   mf_143 = node([2, [3, None, [5, [7, [11]]]], [13, [17], [19, [23]]]])
+
+
+
   def test_is_bst(bsts):
       for bst in bsts:
           assert bst.is_bst()
@@ -615,12 +714,36 @@ Many problems in the code-block below, due to the reliance on the same tree clas
   def test_create_BST():
       assert node.list_to_BST(sorted([1, 4, 6, 3, 4, 87, 9, 3])).is_bst()
 
+  def test_BST_to_linked_list():
+      """Modifies underlying structure, so custom tree created here."""
+      the_tree = node([108, [108, [-10, [-14], [2]], [108]], [285, [243], [285,
+                  None, [401]]]])
+      BST_ll = [int(x) for x in node.string_linked_list(
+          node.BST_to_linked_list(the_tree)[0]).split()]
+      assert BST_ll == sorted(BST_ll)
+
+  def test_largest_elements():
+      assert bst_142.largest_elements(3) == [285, 285, 401]
+      
+  def test_lowest_common_ancestor():
+      assert bst_141.lowest_common_ancestor(29, 53).value == 43
+      assert bst_141.lowest_common_ancestor(2, 13).value == 7
+      assert bst_141.lowest_common_ancestor(5, 31).value == 19
+
+  def test_descendant_and_ancestor():
+      assert bst_141.descendant_and_ancestor(23, [19, 37])
+      assert not bst_141.descendant_and_ancestor(23, [43, 53])
+
   test_is_bst([test_bst, test_bst_2, bst_141, bst_142])
   test_successor(bsts)
   test_search()
   test_search_larger()
   test_mf_search()
   test_create_BST()
+  test_BST_to_linked_list()
+  test_largest_elements()
+  test_lowest_common_ancestor()
+  test_descendant_and_ancestor()
 #+END_SRC
 ** 15 Meta-algorithms
 *** DONE Mergesort
