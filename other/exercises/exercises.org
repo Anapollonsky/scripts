@@ -1,7 +1,8 @@
 Just some programming exercises.
 * EPI
-** Stacks & Queues (8)
-*** Path Cleaning (8)
+A collection of exercises from the textbook "Elements of Programming Interviews". 
+** 8 Stacks & Queues
+*** 8 Path Cleaninggg (8)
 Clean up a path name, dealing with ., .., and // in path names.
 #+BEGIN_SRC python :results output
   from collections import deque
@@ -34,7 +35,7 @@ Clean up a path name, dealing with ., .., and // in path names.
 : scripts/awkscripts
 : usr/bin/gcc
 
-*** Queue from Two Stacks (12)
+*** 12 Queue from Two Stacks
 #+BEGIN_SRC python :results output 
   from collections import deque
 
@@ -67,7 +68,7 @@ Clean up a path name, dealing with ., .., and // in path names.
 : 2
 : 3
 
-*** Queue with Max (13)
+*** 13 Queue with Max
 
 #+BEGIN_SRC python :results output
   from collections import deque
@@ -122,7 +123,7 @@ Clean up a path name, dealing with ., .., and // in path names.
 : 3
 : 2
 
-*** Maximum of a Sliding Window (14)
+*** 14 Maximum of a Sliding Windoww
 #+BEGIN_SRC python :results output
   from collections import deque
 
@@ -164,8 +165,9 @@ Clean up a path name, dealing with ., .., and // in path names.
 : 24
 : 28
 
-** Binary Tree (9)
+** 9 Binary Tree
 *** Binary Tree Problems 
+Many problems in the code-block below, due to the reliance on the same tree classes
 #+BEGIN_SRC python :results output :tangle tree.py
   from copy import deepcopy
   from collections import deque
@@ -407,11 +409,11 @@ Clean up a path name, dealing with ., .., and // in path names.
 : H
 : D
 
-** Heap (10)
+** 10 Heap
 #+BEGIN_SRC python :results output
 
 #+END_SRC
-** Hash Table (11)
+** 11 Hash Table
 *** Closest equal entries in list (12.3)
 #+BEGIN_SRC python
   from collections import defaultdict
@@ -436,7 +438,7 @@ Clean up a path name, dealing with ., .., and // in path names.
 
 
 #+END_SRC
-** Meta-algorithms (15)
+** 15 Meta-algorithms
 *** DONE Mergesort
 CLOSED: [2015-05-24 Sun 14:30]
 Personal mergesort implementation. 
@@ -474,7 +476,7 @@ Personal mergesort implementation.
 #+RESULTS:
 : None
 
-*** DONE Skyline Drawing (1)
+*** DONE 1 Skyline Drawing
 'Draw' a skyline given a collection of buildings described by leftx, rightx, and height coordinates. Implementation
 changes the list into a list of non-overlapping sections, first in n**2 and then in nlogn time.
 CLOSED: [2015-05-24 Sun 14:30]
@@ -553,7 +555,7 @@ CLOSED: [2015-05-24 Sun 14:30]
   print(merge_buildings(buildings2) == merge_buildings_faster(buildings2))
 #+END_SRC
 
-*** DONE Counting Inversions (2)
+*** DONE 2 Counting Inversions
 CLOSED: [2015-05-24 Sun 14:30]
 Array A of n numbers, returns number of pairs of indicies so that i < j and A[i] and A[j]. nlogn
 #+BEGIN_SRC python :results output
@@ -589,7 +591,7 @@ Array A of n numbers, returns number of pairs of indicies so that i < j and A[i]
 #+RESULTS:
 : 7
 
-*** DONE Nearest Points in the Plane (3)
+*** DONE 3 Nearest Points in the Plane
 CLOSED: [2015-05-24 Sun 14:30]
 Find the nearest points in a plane, preferably without comparing every single pair.
 #+BEGIN_SRC python :results output
@@ -639,7 +641,7 @@ Find the nearest points in a plane, preferably without comparing every single pa
 #+RESULTS:
 : sol(p1=p(x=5, y=5), p2=p(x=3, y=5), dist=4)
 
-*** DONE Tree Diameter (4)  
+*** DONE 4 Tree Diameter
 CLOSED: [2015-05-24 Sun 14:30]
 Find the diameter of a tree. It's the maximum distance from one node to another
 #+BEGIN_SRC python
@@ -672,7 +674,7 @@ Find the diameter of a tree. It's the maximum distance from one node to another
   b = node('b', 0, [node('a', 14, []), node('c', 7, [node('d', 4, []), node('l', 3, [])])])
   print(find_perimeter(b))
 #+END_SRC
-*** TODO Longest nondecreasing subsequence(6)
+*** TODO 6 Longest nondecreasing subsequence
 Longest nondecreasing subsequence of a sequence. Doesn't have to be contiguous
 
 
@@ -690,7 +692,7 @@ Longest nondecreasing subsequence of a sequence. Doesn't have to be contiguous
               members[a] = None
           
 #+END_SRC
-*** TODO Longest subarray where sum <= k (7)
+*** TODO 7 Longest subarray where sum <= k
 Longest sequence the sum of which is under the cap. 
 #+BEGIN_SRC python :results output
   from collections import deque, namedtuple
@@ -745,7 +747,7 @@ Longest sequence the sum of which is under the cap.
 
   print(longest_subarray_capped_sum2(array, 184))
 #+END_SRC
-*** TODO Levenshtein Distance (11)
+*** TODO 11 Levenshtein Distance
 Algorithm to find 'distance' between two strings, measured in insertion, deletion and replacement operations.
 #+BEGIN_SRC python :results output
 
@@ -755,8 +757,8 @@ Algorithm to find 'distance' between two strings, measured in insertion, deletio
       for a in word1:
           
 #+END_SRC
-** Graph (16)
-*** DONE Transform one string into another(2)
+** 16 Graph
+*** DONE 2 Transform one string into another
 CLOSED: [2015-05-24 Sun 20:45]
 Find the shortest paths to connect a list of words using a given dictionary. Can either only use replacements, or include off-by-1 character insertions/deletions. Bytearrays used for efficiency of single-character operations (they're mutable). 
 #+BEGIN_SRC python :results output
@@ -839,11 +841,11 @@ Find the shortest paths to connect a list of words using a given dictionary. Can
 : {'cat': ['cat', 'hat'], 'hearse': ['hearse', 'hears', 'hearts', 'hearth', 'heath', 'heat', 'hat'], 'what': ['what', 'hat']}
 : {'when': ['when', 'whet'], 'what': ['what', 'whet']}
 
-*** Extended Contacts (5)
+*** 5 Extended Contacts
 #+BEGIN_SRC python :results output
 
 #+END_SRC
-*** DONE Quickest Route (10)
+*** DONE 10 Quickest Route
 CLOSED: [2015-05-24 Sun 18:55]
 Flight = (start time, originating city, destination city, arrival time). Daily. 60 minutes to transfer. Compute fastest from city a to city b.
 #+BEGIN_SRC python :results output :tangle flights_shortest_time.py
@@ -914,14 +916,14 @@ Flight = (start time, originating city, destination city, arrival time). Daily. 
 
 #+RESULTS:
 
-*** Road Network (11)
+*** 11 Road Network
 #+BEGIN_SRC python :results output
 
 
 
 #+END_SRC
-*** Arbitrage (12)
-Exchange rates specified by 2D array. Test if arbitrage is possible.
+*** 12 Arbitrage
+Exchange rates specified by 2D array. Test if arbitrage is possible. Probably a very simple solution possible with linear algebra.
 #+BEGIN_SRC python :results output
   exchange_rates = [[1, 2, 3],
                     [2, 3, 4],
