@@ -413,7 +413,8 @@ Many problems in the code-block below, due to the reliance on the same tree clas
 #+BEGIN_SRC python :results output
 
 #+END_SRC
-** 11 Hash Table
+** 11 Hash Table*
+
 *** Closest equal entries in list (12.3)
 #+BEGIN_SRC python
   from collections import defaultdict
@@ -436,6 +437,122 @@ Many problems in the code-block below, due to the reliance on the same tree clas
                   match_list
                   
 
+
+#+END_SRC
+** 14 Binary Search Tree
+#+BEGIN_SRC python :results output
+  class node:
+      def __init__(self, value, left=None, right=None, parent=None):
+          if isinstance(value, list):
+              self.value = value[0]
+              self.left, self.right = None, None
+              if len(value) > 1 and value[1]:
+                  self.left = node(value[1])
+                  self.left.parent = self
+              if len(value) > 2 and value[2]:
+                  self.right = node(value[2])
+                  self.right.parent = self
+          else:
+              self.value = value
+              self.left = left
+              self.right = right
+
+      
+      def __repr__(self):
+          return str([self.value, self.left, self.right])
+
+      # 1
+      # Verify that a tree is a BST
+      def is_bst(self):
+          left = (self.left.is_bst() and (self.value > self.left.value)) if self.left else True 
+          right = (self.right.is_bst() and (self.value < self.right.value)) if self.right else True
+          return left and right
+
+      # 2
+      # Find 'next' node in an inorder walk
+      def successor(self):
+          if self.right:
+              child = self.right
+              while child.left or child.right:
+                  if child.left:
+                      child = child.left
+                  elif child.right:
+                      child = child.right
+              return child
+          up = self.parent
+          while up:
+              if up.value > self.value:
+                  return up            
+              up = up.parent
+          return None
+
+      # 3 Uncertain how to reconcile 'remove' function with 'do not modify
+      # contents of any node' instructions.
+      def insert(self, value):
+          if value > self.value:
+              if self.right:
+                  self.right.insert(value)
+              else:
+                  self.right = node(value)
+          else:
+              if self.left:
+                  self.left.insert(value)
+              else:
+                  self.left = node(value)
+
+      # 4
+      # Recursive and iterative searching in-order functions
+      def search_recursive(self, value):
+          if value < self.value:
+              if self.left:
+                  return self.left.search(value)
+              else:
+                  return None
+          elif value == self.value:
+              return self
+          elif value > self.value:
+              if self.right:
+                  return self.right.search(value)
+              else:
+                  return None
+
+      def search_iterative(self, value):
+          current = self
+          while current:
+              if current.value > value:
+                  current = current.left
+              elif current.value == value:
+                  return current
+              elif current.value < value:
+                  current = current.right
+          return None
+          
+      
+                  
+
+  test_bst = node([5, [1], [7]])
+  test_bst_2 = node([5, [2, [1]], [7, None, [9]]])
+  test_bst_3 = node([108, [108, [-10, [-14], [2]], [108]], [285, [243], [285,
+                                                                         None, [401]]]])
+  bsts = [test_bst, test_bst_2, test_bst_3]
+
+  def test_is_bst(bsts):
+      for bst in bsts:
+          assert bst.is_bst()
+
+  def test_successor(bsts):
+      assert bsts[0].left.successor().value == 5
+      assert bsts[1].right.successor().value == 9
+
+  def test_search(bsts):
+      for func in [search_recursive, search_iterative]:
+          assert bsts[2].func(108) == bsts[2].left
+          assert bsts[2].func(285) == bsts[2].right
+          assert bsts[2].func(143) == None
+  print(bsts[2].search_iterative(108))
+
+  test_is_bst(bsts)
+  test_successor(bsts)
 
 #+END_SRC
 ** 15 Meta-algorithms
@@ -841,10 +958,46 @@ Find the shortest paths to connect a list of words using a given dictionary. Can
 : {'cat': ['cat', 'hat'], 'hearse': ['hearse', 'hears', 'hearts', 'hearth', 'heath', 'heat', 'hat'], 'what': ['what', 'hat']}
 : {'when': ['when', 'whet'], 'what': ['what', 'whet']}
 
-*** 5 Extended Contacts
+*** DONE 5 Extended Contacts
+CLOSED: [2015-05-24 Sun 22:24]
+Let C be extended contact of A if contact of A or contact of extended contact of A. Take social network, computes each individual's extended contacts.
 #+BEGIN_SRC python :results output
+  from collections import namedtuple
+
+  p = namedtuple('p', ['name', 'contacts', 'extended'])
+
+  b = p('b', [], [])
+  a = p('a', [b], [])
+  b.contacts.append(c)
+  c = p('c', [a], [])
+
+  people = [a, b, c]
+
+  def generate_extended_contacts(people):
+      for person in people:
+          person.extended.extend(person.contacts)
+      while 1:
+          changed = False
+          for person in people:
+              for ex in list(person.extended):
+                  for ex_contact in list(ex.contacts):
+                      if ex_contact not in person.extended and ex_contact.name != person.name:
+                          person.extended.append(ex_contact)
+                          changed = True
+          if changed == False: # Convergence
+              return people
+
+  def print_person(person):
+      print(person.name + ": " +
+            str([x.name for x in person.contacts]) + " / " +
+            str([x.name for x in person.extended]))
+
+  [print_person(x) for x in generate_extended_contacts(people)]
 
 #+END_SRC
+
+#+RESULTS:
+
 *** DONE 10 Quickest Route
 CLOSED: [2015-05-24 Sun 18:55]
 Flight = (start time, originating city, destination city, arrival time). Daily. 60 minutes to transfer. Compute fastest from city a to city b.
