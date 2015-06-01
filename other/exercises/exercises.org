@@ -666,7 +666,27 @@ Many problems in the code-block below, due to the reliance on the same tree clas
               elif current.value <= target and current.right:
                   current = current.right
           return False
-                  
+
+      # 15 Range-query, find list of members that fall within a given range.
+      def range_query(self, a, b):
+          a, b = min(a, b), max(a, b)
+          if b < self.value:
+              return [] if not self.left else self.left.range_query(a, b)
+          elif a > self.value:
+              return [] if not self.right else self.right.range_query(a, b)
+          elif a <= self.value and b >= self.value:
+              left = [] if not self.left else self.left.range_query(a, self.value)
+              right = [] if not self.right else self.right.range_query(self.value, b)
+              return left + [self.value] + right
+
+      # 16 Minimize distance in three sorted arrays. Distance[i,j,k] = maximum
+      # distance between any two with A[i], B[j], C[k]. Return triple i,j,k so
+      # that distance is minimum.
+      # def min_3_dist(arrays):
+      #     def get_dist(arrays, indices):
+      #         return ma
+
+       
   test_bst = node([5, [1], [7]])
   test_bst_2 = node([5, [2, [1]], [7, None, [9]]])
   bst_141 = node([19, [7,
@@ -734,6 +754,9 @@ Many problems in the code-block below, due to the reliance on the same tree clas
       assert bst_141.descendant_and_ancestor(23, [19, 37])
       assert not bst_141.descendant_and_ancestor(23, [43, 53])
 
+  def test_range_query():
+      assert bst_141.range_query(11, 20) == [11, 13, 17, 19]
+      
   test_is_bst([test_bst, test_bst_2, bst_141, bst_142])
   test_successor(bsts)
   test_search()
@@ -1616,3 +1639,94 @@ return(findpath_multiple(['bath', 'kent', 'what']))
 #+RESULTS:
 | cast | ((cast cash bash bath) (cast cant cent kent) (cast cost coat chat what)) |
 
+* Sequence
+** Longest nondecreasing subsequence
+EPI specified an nlogn solution, here's an n*m solution, where m is the maximum length of a nondecreasing subsequence.
+#+BEGIN_SRC python :results output
+  from collections import deque
+
+  sequence = [0, 8, 4, 12, 2, 10, 6, 14, 1, 9]
+
+  def longest_nondecreasing_subsequence(sequence):
+      paths = {1: deque([sequence[0]])}
+      for member in sequence[1:]:
+          for path in paths:
+              if paths[path][-1] > member and ((len(paths[path]) < 2) or
+                                               (paths[path][-2] < member)):
+                  paths[path][-1] = member
+              if (paths[path][-1] < member and
+                    (((path + 1) not in paths) or
+                    (paths[path + 1][-1] > member))):
+                  paths[path + 1] = paths[path]
+                  paths[path + 1].append(member)
+                  break
+      return list(sorted(list(paths.items()), key=lambda x: x[0], reverse=True)[0][1])
+
+  print(longest_nondecreasing_subsequence(sequence))
+#+END_SRC
+nlogn solution
+#+BEGIN_SRC python :results output
+  import bisect
+  from collections import deque
+
+  sequence = [0, 8, 4, 12, 2, 10, 6, 14, 1, 9]
+
+  def longest_nondecreasing_subsequence(sequence):
+      tops = [sequence[0]]
+      seqs = [deque([sequence[0]])]
+      for i, member in enumerate(sequence[1:]):
+          # Find insertion point
+          fit = bisect.bisect_right(tops, member)
+
+          # Case that it's better than something its own size
+          if len(seqs) > fit and seqs[fit][-1] > member:
+              seqs[fit] = deque(seqs[fit-1])
+              seqs[fit].append(member)
+              tops[fit] = member
+
+          # Case that it makes a bigger biggest
+          elif len(seqs) == fit and member > seqs[fit-1][-1]:
+              seqs.append(deque(seqs[fit - 1]))
+              seqs[fit].append(member)
+              tops.append(member)
+      return list(seqs[-1])
+          
+  print(longest_nondecreasing_subsequence(sequence))
+#+END_SRC
+** Optimal Buy/Sell for sequence
+** 
+Given an array of stock prices, specify which indices to buy and which to sell to maximize profit.
+#+BEGIN_SRC python :results output
+
+  sequence1 = [3, 4, 8, 3, 7, 6, 1]
+  expected_output1 = [1, 1, -1, 1, -1, -1, -1] # 1 is buy/hold, -1 is sell/hold
+
+  sequence2 = [1, 2, 3, 4, 5, 3, 2, 4, 5]
+  expected_output2 = [1, 1, 1, 1, -1, -1, 1, 1, -1]
+
+  def maximize_profit(inlist):
+      state = -1
+      output = []
+      for i, member in enumerate(inlist):        
+          if state == -1:
+              if len(inlist) > i + 1 and inlist[i+1] > member:
+                  state = 1
+              else:
+                  state = -1
+          if state == 1:
+              if len(inlist) > i + 1 and inlist[i+1] <= member:
+                  state = -1
+              elif len(inlist) <= i + 1:
+                  state = -1
+              else:
+                  state = 1
+          output.append(state)
+      return output
+
+  out1 = maximize_profit(sequence1)
+  out2 = maximize_profit(sequence2)
+  assert expected_output1 == out1
+  assert expected_output2 == out2
+  print(out1)
+  print(out2)
+#+END_SRC
