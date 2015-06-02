@@ -1694,7 +1694,6 @@ nlogn solution
   print(longest_nondecreasing_subsequence(sequence))
 #+END_SRC
 ** Optimal Buy/Sell for sequence
-** 
 Given an array of stock prices, specify which indices to buy and which to sell to maximize profit.
 #+BEGIN_SRC python :results output
 
@@ -1729,4 +1728,71 @@ Given an array of stock prices, specify which indices to buy and which to sell t
   assert expected_output2 == out2
   print(out1)
   print(out2)
+#+END_SRC
+** Longest common substring
+Actually quite complicated, the doing-it-with-two-words part.
+#+BEGIN_SRC python :results output
+  words = ["magnanimous", "magma", "carmagazine"]
+
+  def find_common_substrings(words):
+      common_words = [words[0]]
+      for word in words[1:]:
+          
+          
+          
+
+#+END_SRC
+** Longest Alternating Sequence
+** Longest Subarray Under Sum
+Worked first time I ran it!
+#+BEGIN_SRC python :results output
+  sequence = [1, 5, 4, 6, 7, 3, 5, 2, 4, 8, 9]
+
+
+  def find_longest_alternating_sequence(sequence):
+      longest_sequence = []
+      current_sequence = [sequence[0]]
+      tic = 0
+      for member in sequence[1:]:
+          if (tic == 0 or tic == 1) and member > current_sequence[-1]:
+              current_sequence.append(member)
+              tic = -1
+          elif (tic == 0 or tic == -1) and member < current_sequence[-1]:
+              current_sequence.append(member)
+              tic = 1
+          else:
+              current_sequence = [member]
+              tic = 0
+          if len(current_sequence) > len(longest_sequence):
+              longest_sequence = current_sequence
+      return longest_sequence
+
+  print(find_longest_alternating_sequence(sequence))
+#+END_SRC
+#+BEGIN_SRC python :results output
+  from itertools import accumulate
+  from bisect import bisect_left
+
+  sequence = [431, -15, 639, 342, -14, 565, -924, 635, 167, -70]
+
+  def longest_subarray_under_sum(sequence, max_sum):
+      sequence_accumulate = list(accumulate(sequence))
+      end_min_sequence = []
+      min_value = float("inf")
+      for member in reversed(sequence_accumulate):
+          min_value = min(member, min_value)
+          end_min_sequence.append(min_value)
+      end_min_sequence.reverse()
+      best_sequence = []
+      best_len = 0
+      for i, member in enumerate(sequence_accumulate):
+          j = bisect_left(end_min_sequence, member + max_sum)
+          if (j - i) > best_len:
+              best_len = j - i
+              best_sequence = sequence[i+1:j]
+      return best_sequence
+          
+
+  print(longest_subarray_under_sum(sequence, 184))
+
 #+END_SRC
