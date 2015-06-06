@@ -408,29 +408,102 @@ Many problems in the code-block below, due to the reliance on the same tree clas
 #+BEGIN_SRC python :results output
 
 #+END_SRC
-** 11 Hash Table*
-
-*** Closest equal entries in list (12.3)
-#+BEGIN_SRC python
+** 12 Hash Table
+*** DONE Closest equal entries in list (12.3)
+CLOSED: [2015-06-05 Fri 20:54]
+#+BEGIN_SRC python :results output
   from collections import defaultdict
 
   s = ["all", "work", "and", "no", "play", "makes", "for", "no", "work", "no", "fun", "and", "no", "results"]
+
   def closest_pairs(inlist):
       the_dict = defaultdict(list)
       for i, k in enumerate(inlist):
-          the_dict[k].append[i]
+          the_dict[k].append(i)
           min_distance = 9999999
-          match_list = []
+          min_val = None
       for k in the_dict:
           leng = len(the_dict[k])
-          if leng > 2:
-              current_distance = min([b - a for a, b in zip(k[:-1], k[1:])])
+          if leng >= 2:
+              current_distance = min([b - a for a, b in zip(the_dict[k][:-1], the_dict[k][1:])])
               if current_distance < min_distance:
                   min_distance = current_distance
-                  match_list = []
-              elif current_distance == min_distance:
-                  match_list
-                  
+                  min_val = k
+      return(min_distance, min_val)
+
+  print(closest_pairs(s))
+#+END_SRC
+
+#+RESULTS:
+: (2, 'no')
+
+** 13 Sorting
+*** DONE 3 Least Distance Sorting
+CLOSED: [2015-06-05 Fri 20:42]
+#+BEGIN_SRC python :results output
+  statues = [1, 4, 2, 6, 7, 3 ,9]
+
+  def sort_minimize_movement(sequence):
+      """Sorts, moving each object the minimum possible distance. Each moved only once.
+      Assumed that first object has to be at position of old first object."""
+      sequence = [float(x) for x in sequence]
+      new_sequence = [None for x in sequence]
+      for k in range(len(sequence)):
+          min_index = sequence.index(min(sequence))
+          new_sequence[k] = sequence[min_index]
+          sequence[min_index] = float("inf")
+      new_sequence = [int(x) for x in new_sequence]
+      return new_sequence
+
+
+  print(sort_minimize_movement(statues))
+
+
+#+END_SRC
+*** 4 Counting Sort
+#+BEGIN_SRC python :results output
+  from collections import Counter
+
+  # Group integers with the same value, not necessarily sorted
+
+  def group(data):
+      return list(Counter(data).items())
+
+
+#+END_SRC
+*** DONE 7 Count occurrences of characters in a sentence
+CLOSED: [2015-06-05 Fri 20:33]
+#+BEGIN_SRC python :results output
+  from collections import Counter
+
+  string1 = "bcdacebe"
+
+  def count_character_occurrences(string):
+      # nlogn sort, linear Counter-building
+      return sorted(list(Counter(string).items()), key=lambda x: x[0])
+
+  print(count_character_occurrences(string1))
+
+#+END_SRC
+*** DONE 15 Pancake Sorting
+CLOSED: [2015-06-05 Fri 20:33]
+#+BEGIN_SRC python :results output
+  data = [1, 4, 2, 3, 6, 3, 7, 12, 4, 1, 2]
+
+  def pancake_sort(data):
+      """Sort by flipping!"""
+      def flip(array, index):
+          array[index:] = reversed(array[index:])
+
+      for k in range(len(data) - 1):
+          min_ind = data[k:].index(min(data[k:])) + k # A bit inefficient (2n vs n), but concise
+          print(min_ind)
+          flip(data, min_ind)
+          flip(data, k)
+      return data
+
+  print(pancake_sort(data))
+
 
 
 #+END_SRC
@@ -1004,7 +1077,9 @@ Find the diameter of a tree. It's the maximum distance from one node to another
   b = node('b', 0, [node('a', 14, []), node('c', 7, [node('d', 4, []), node('l', 3, [])])])
   print(find_perimeter(b))
 #+END_SRC
-*** TODO 6 Longest nondecreasing subsequence
+*** DONE 6 Longest nondecreasing subsequence
+CLOSED: [2015-06-03 Wed 20:16]
+Finished in 'Sequence' section, not EPI.
 Longest nondecreasing subsequence of a sequence. Doesn't have to be contiguous
 
 
@@ -1022,7 +1097,9 @@ Longest nondecreasing subsequence of a sequence. Doesn't have to be contiguous
               members[a] = None
           
 #+END_SRC
-*** TODO 7 Longest subarray where sum <= k
+*** DONE 7 Longest subarray where sum <= k
+CLOSED: [2015-06-03 Wed 20:16]
+Finished in 'Sequence' section, not EPI.
 Longest sequence the sum of which is under the cap. 
 #+BEGIN_SRC python :results output
   from collections import deque, namedtuple
@@ -1077,15 +1154,121 @@ Longest sequence the sum of which is under the cap.
 
   print(longest_subarray_capped_sum2(array, 184))
 #+END_SRC
-*** TODO 11 Levenshtein Distance
-Algorithm to find 'distance' between two strings, measured in insertion, deletion and replacement operations.
+*** 9 Maximum 2D Subarray
+
 #+BEGIN_SRC python :results output
+  matrix = [[1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 0]]
+
+  def matrix_only_ones(matrix):
+      
+
+#+END_SRC
+
+*** DONE 10 Sequence in matrix
+CLOSED: [2015-06-03 Wed 21:04]
+Look for a sequence in an array, where a continuation may be in any direction and overlaps and repeats of characters are allowed.
+#+BEGIN_SRC python :results output
+  from collections import deque
+
+  matrix = [[1, 3, 5], [2, 4, 6], [3, 5, 7]]
+  seq_tru = [1, 3, 4, 6]
+  seq_fals = [1, 2, 3, 4]
+
+  def find_sequence(matrix, sequence):
+
+      def check_neighbors(matrix, x, y, sequence):
+          if not len(sequence):
+              return True
+          neighbors = []
+          valid_neighbors = []
+          if x < len(matrix) - 1:     neighbors.append((x + 1, y))
+          if x > 0:                   neighbors.append((x - 1, y))
+          if y < len(matrix[0]) - 1:  neighbors.append((x, y + 1))
+          if y > 0:                   neighbors.append((x, y - 1))
+          return any([check_neighbors(matrix, nx, ny, sequence[1:])
+                      for nx, ny in neighbors
+                      if matrix[nx][ny] == sequence[0]])
+
+      for x, column in enumerate(matrix):
+          for y, member in enumerate(column):
+              if check_neighbors(matrix, x, y, sequence):
+                  return True
+      return False
+
+  print(find_sequence(matrix, seq_tru))
+  print(find_sequence(matrix, seq_fals))
+#+END_SRC
+*** DONE 11 Levenshtein Distance
+
+CLOSED: [2015-06-03 Wed 20:12]
+Algorithm to find 'distance' between two strings, measured in insertion, deletion and replacement operations.
+
+#+BEGIN_SRC python :results output
+  def levenshtein(word1, word2, database={}):
+      if word1 in database and word2 in database[word1]:
+          return database[word1][word2]
+      elif word2 in database and word1 in database[word2]:
+          return database[word2][word1]
+      if len(word1) == 0:
+          distance = len(word2)
+      elif len(word2) == 0:
+          distance = len(word1)
+      else:
+          distance = min(levenshtein(word1, word2[:-1], database) + 1,
+                         levenshtein(word1[:-1], word2, database) + 1,
+                         (levenshtein(word1[:-1], word2[:-1], database) +
+                          (0 if word1[-1] == word2[-1] else 1)))
+
+      if word1 not in database:
+          database[word1] = {}
+      if word2 not in database:
+          database[word2] = {}
+      database[word1][word2] = distance
+      database[word2][word1] = distance
+      return distance
+
+  print(levenshtein("kitten", "sitting"))
+  print(levenshtein("magnanimous", "bobcat"))
 
 
-  def levenshtein(word1, word2):
-      insertions = abs(len(word1) - len(word2))
-      for a in word1:
-          
+#+END_SRC
+
+#+RESULTS:
+: 3
+: 10
+
+*** TODO 16 Number of ways
+#+BEGIN_SRC python :results output
+  from collections import namedtuple
+  from copy import deepcopy
+
+  grid_small_empty = [[0 for x in range(3)] for y in range(3)]
+  grid_empty = [[0 for x in range(5)] for y in range(5)]
+  grid_obstacles = deepcopy(grid_empty)
+  grid_obstacles[3][3] = 1
+
+  point = namedtuple('point', ['x', 'y'])
+  def find_paths(grid, a, b, paths=0):
+      neighbors = []
+      points = 0
+      if a == b:
+          return 0
+      if a.x < b.x:
+          neighbors.append(point(a.x + 1, a.y))
+      if a.y < b.y:
+          neighbors.append(point(a.x, a.y + 1))
+      # print(neighbors, a)
+      points += len(neighbors) - paths
+      for neighbor in neighbors:
+          points += find_paths(grid, neighbor, b, paths=1)
+          points += find_paths(grid, neighbor, b, paths=1)
+      return points
+
+  print(find_paths(grid_small_empty, point(0, 0), point(2, 2)))
+
+
+
+
 #+END_SRC
 ** 16 Graph
 *** DONE 2 Transform one string into another
@@ -1296,7 +1479,8 @@ Exchange rates specified by 2D array. Test if arbitrage is possible. Probably a 
 
 #+END_SRC
 * Trees
-** Building tree from inorder and postorder.
+** DONE Building tree from inorder and postorder.
+CLOSED: [2015-06-03 Wed 20:12]
 Assignment: 
 *** tree 1
        a
@@ -1346,7 +1530,8 @@ g
 | a | (b (d None ((g) None None)) ((e) None None)) | (c None (f ((h) None None) None)) |
 
  
-** Lowest common ancestor
+** DONE Lowest common ancestor
+CLOSED: [2015-06-03 Wed 20:12]
 *** Generic tree, multiple common values
 Tries to find the closest common ancestor in a tree between a list of values. Little error-checking is done.
    a
@@ -1415,7 +1600,8 @@ Assumes tree is a BST, only takes two values.
 #+RESULTS:
 : 5
 
-** Balance an unbalanced BST
+** DONE Balance an unbalanced BST
+CLOSED: [2015-06-03 Wed 20:12]
 Balance a tree, knowing that the left side is larger than the right.
        7
      5   8
@@ -1439,7 +1625,8 @@ return balance_once(tree)
 | 5 | (4 (3 (2 None None) None) None) | (7 (6 None None) (8 None None)) |
 
 * Graph
-** Six degrees of Kevin Bacon
+** DONE Six degrees of Kevin Bacon
+CLOSED: [2015-06-03 Wed 20:12]
 Given a 'list' of movies and their associated cast, devise and implement a way to find the shortest path between any actor and Kevin Bacon.
 
 *** Strategy
@@ -1502,7 +1689,8 @@ Visit a node if never visited. Update path. New path will never be shorter than 
 #+RESULTS:
 | x | y | z |
 
-** Word-neighbors
+** DONE Word-neighbors
+CLOSED: [2015-06-03 Wed 20:12]
 You're given two words. Find the shortest path between them, where a single move entails switching a single letter in each word (or inserting one), and each intermediary step must be a valid word. 
 
 First step is generating the neighbors for every word. This script does that, both for the case with only letter-swapping and then with letter-insertion as well. This is then pickled, so it doesn't have to be done again and again while testing.
@@ -1640,7 +1828,8 @@ return(findpath_multiple(['bath', 'kent', 'what']))
 | cast | ((cast cash bash bath) (cast cant cent kent) (cast cost coat chat what)) |
 
 * Sequence
-** Longest nondecreasing subsequence
+** DONE Longest nondecreasing subsequence
+CLOSED: [2015-06-03 Wed 20:13]
 EPI specified an nlogn solution, here's an n*m solution, where m is the maximum length of a nondecreasing subsequence.
 #+BEGIN_SRC python :results output
   from collections import deque
@@ -1693,7 +1882,8 @@ nlogn solution
           
   print(longest_nondecreasing_subsequence(sequence))
 #+END_SRC
-** Optimal Buy/Sell for sequence
+** DONE Optimal Buy/Sell for sequence
+CLOSED: [2015-06-03 Wed 20:13]
 Given an array of stock prices, specify which indices to buy and which to sell to maximize profit.
 #+BEGIN_SRC python :results output
 
@@ -1742,8 +1932,10 @@ Actually quite complicated, the doing-it-with-two-words part.
           
 
 #+END_SRC
-** Longest Alternating Sequence
-** Longest Subarray Under Sum
+** DONE Longest Alternating Sequence
+CLOSED: [2015-06-03 Wed 20:13]
+** DONE Longest Subarray Under Sum
+CLOSED: [2015-06-03 Wed 20:13]
 Worked first time I ran it!
 #+BEGIN_SRC python :results output
   sequence = [1, 5, 4, 6, 7, 3, 5, 2, 4, 8, 9]
