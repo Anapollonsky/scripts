@@ -475,6 +475,39 @@ CLOSED: [2015-06-05 Fri 20:42]
 
 
 #+END_SRC
+*** DONE 5 Sorted Intersection
+CLOSED: [2015-06-09 Tue 20:17]
+#+BEGIN_SRC python :results output
+  from itertools import zip_longest
+
+  array1 = [1, 3, 3, 5, 6, 7, 9, 12]
+  array2 = [1, 4, 5, 8, 10, 11, 12, 15, 201]
+  array3 = [1, 3, 4, 6, 7, 8, 9, 12, 14]
+  def sorted_intersection(arrays):
+      visited = {}
+      indices = [0 for x in arrays]
+      smallest_array = min(arrays, key=lambda x: len(x))
+      for member in smallest_array:
+          if member in visited:
+              continue
+          present = True
+          for i, array in enumerate(arrays):
+              if array is smallest_array:
+                  continue
+              for current_val, next_val in zip_longest(array[indices[i]:], array[indices[i] + 1:]):
+                  if not next_val or next_val > member:
+                      break
+                  indices[i] += 1
+              if not array[indices[i]] == member:
+                  present = False
+                  break
+          if present:
+              visited[member] = 1
+      return sorted(list(visited.keys()))
+
+  print(sorted_intersection([array1, array2, array3]))
+
+#+END_SRC
 *** DONE 7 Count occurrences of characters in a sentence
 CLOSED: [2015-06-05 Fri 20:33]
 #+BEGIN_SRC python :results output
