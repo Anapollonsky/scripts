@@ -2,7 +2,7 @@ Just some programming exercises.
 * EPI
 A collection of exercises from the textbook "Elements of Programming Interviews". 
 ** 8 Stacks & Queues
-*** 8 Path Cleaninggg (8)
+*** 8 Path Cleaning (8)
 Clean up a path name, dealing with ., .., and // in path names.
 #+BEGIN_SRC python :results output
   from collections import deque
@@ -508,7 +508,31 @@ CLOSED: [2015-06-09 Tue 20:17]
   print(sorted_intersection([array1, array2, array3]))
 
 #+END_SRC
+*** DONE 6 Team Photo Day
+CLOSED: [2015-06-09 Tue 20:30]
+Pictures of pairs of equal-number teams. Front row and back row. Back row must be taller than inow must be from the same team.
+#+BEGIN_SRC python :results output
+  team1 = [6, 8, 7, 7, 8, 9, 7]
+  team2 = [7, 9, 8, 8, 9, 10, 8]
+  team3 = [3, 4, 3, 10, 23, 2, 3]
+
+  def photo_possible(team1, team2):
+      team1.sort()
+      team2.sort()
+      if not team1[0] > team2[0]: # team 1 now always bigger
+          team1, team2 = team2, team1
+      return all([team1[x] > team2[x] for x in range(len(team1))])
+
+  print(photo_possible(team1, team2)) ## True
+  print(photo_possible(team2, team3)) ## False
+#+END_SRC
+
+#+RESULTS:
+: True
+: False
+
 *** DONE 7 Count occurrences of characters in a sentence
+
 CLOSED: [2015-06-05 Fri 20:33]
 #+BEGIN_SRC python :results output
   from collections import Counter
@@ -522,6 +546,28 @@ CLOSED: [2015-06-05 Fri 20:33]
   print(count_character_occurrences(string1))
 
 #+END_SRC
+*** DONE 8 Unique Elements
+CLOSED: [2015-06-09 Tue 20:33]
+#+BEGIN_SRC python :results output
+  array = [1, 2, 2, 3, 4, 6, 7, 7, 8, 9, 0, 0]
+
+  def unique_elements(array):
+      elements = {}
+      new_array = []
+      for element in array:
+          if element in elements:
+              pass
+          else:
+              elements[element] = True
+              new_array.append(element)
+      return new_array
+
+  print(unique_elements(array))
+#+END_SRC
+
+#+RESULTS:
+: [1, 2, 3, 4, 6, 7, 8, 9, 0]
+
 *** DONE 15 Pancake Sorting
 CLOSED: [2015-06-05 Fri 20:33]
 #+BEGIN_SRC python :results output
