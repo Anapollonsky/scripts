@@ -438,9 +438,6 @@ CLOSED: [2015-06-05 Fri 20:54]
 : (2, 'no')
 
 ** 13 Sorting
-  data = ["test", "extralongline", "randomline", "abcdd"]
-
-  def long_sort(sequence):
       
 *** DONE 3 Least Distance Sorting
 CLOSED: [2015-06-05 Fri 20:42]
@@ -570,6 +567,7 @@ CLOSED: [2015-06-09 Tue 20:33]
 
 *** DONE 15 Pancake Sorting
 CLOSED: [2015-06-05 Fri 20:33]
+Sort with the only direct operation you can do on the array being flipping the list from an index to the end.
 #+BEGIN_SRC python :results output
   data = [1, 4, 2, 3, 6, 3, 7, 12, 4, 1, 2]
 
@@ -580,16 +578,59 @@ CLOSED: [2015-06-05 Fri 20:33]
 
       for k in range(len(data) - 1):
           min_ind = data[k:].index(min(data[k:])) + k # A bit inefficient (2n vs n), but concise
-          print(min_ind)
           flip(data, min_ind)
           flip(data, k)
       return data
-
+  print(data)
   print(pancake_sort(data))
+#+END_SRC
 
+#+RESULTS:
+: [1, 4, 2, 3, 6, 3, 7, 12, 4, 1, 2]
+: [1, 1, 2, 2, 3, 3, 4, 4, 6, 7, 12]
 
+#+BEGIN_SRC C++ :flags -std=c++14
+  #include <vector>
+  #include <algorithm>
+  #include <iostream>
+
+  using namespace std;
+
+  vector<float> pancake_sort(vector<float> input) {
+    vector<float> output(input);
+    auto flip = [] (vector<float> array, int i) {
+      reverse(array.begin() + i, array.end());
+      return(array);
+    };
+
+    for (size_t i=0; i < output.size(); ++i) {
+      int min_ind = min_element(output.begin() + i, output.end()) - output.begin();
+      output = flip(output, min_ind);
+      output = flip(output, i);
+    }
+    return(output);
+  }
+
+  int main() {
+    vector<float> input {2, 4, 2, 3, 6, 3, 7, 12, 4, 1, 2};
+    vector<float> output = pancake_sort(input);
+
+    cout << endl;
+    for (float i : input) {
+      cout << i << " ";
+    }
+    cout << endl;
+    for (float i : output) {
+      cout << i << " ";
+    }
+  }
 
 #+END_SRC
+
+#+RESULTS:
+| 2 | 4 | 2 | 3 | 6 | 3 | 7 | 12 | 4 | 1 |  2 |
+| 1 | 2 | 2 | 2 | 3 | 3 | 4 |  4 | 6 | 7 | 12 |
+
 ** 14 Binary Search Tree
 #+BEGIN_SRC python :results output
   from itertools import takewhile
@@ -1270,7 +1311,7 @@ Longest sequence the sum of which is under the cap.
 
   print(longest_subarray_capped_sum2(array, 184))
 #+END_SRC
-*** 9 Maximum 2D Subarray
+*** TODO 9 Maximum 2D Subarray
 
 #+BEGIN_SRC python :results output
   matrix = [[1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 0]]
@@ -1353,6 +1394,72 @@ Algorithm to find 'distance' between two strings, measured in insertion, deletio
 : 3
 : 10
 
+*** DONE 12 Word Breaking
+CLOSED: [2015-06-10 Wed 19:18]
+#+BEGIN_SRC python :results output
+  from collections import defaultdict
+  word_list = ["bed", "a", "bath", "beyond", "and", "bat", "hand", "cat", "mouse"]
+  word_dict = {x:1 for x in word_list}
+
+  def word_break(instr, word_dictionary, result_dictionary=defaultdict(dict)):
+      """Return a prefix-tree (dict of dicts of dicts) of a given string
+      using words from (english) dictionary"""
+      for i in range(1, len(instr) + 1):
+          word = instr[:i]
+          rest = instr[i:]
+          if word in word_list:
+              result_dictionary[word] = {}
+              out = word_break(rest, word_dictionary, result_dictionary[word])
+              if len(rest) and not len(out):  # Catch unfinished branches
+                  del result_dictionary[word]
+      return dict(result_dictionary)
+
+
+  print (word_break("bedbathandbeyond", word_dict))
+
+#+END_SRC
+*** TODO 13 Pretty Printing
+#+BEGIN_SRC python :results output
+  def calc_messiness(instring):
+      messiness_accumulator = 0
+      for line in instring.split("\n")[:-1]:
+          current = len(line) - 1
+          while line[current] == " ":
+              current -= 1
+
+          spaces = len(line) - 1 - current
+          messiness_accumulator += 2 ** spaces
+      return messiness_accumulator
+
+  def pretty_print(instring, max_line_length):
+
+
+#+END_SRC
+*** TODO 15 Score Combinations
+#+BEGIN_SRC python :results output
+  possible_scores = [2, 3, 7]
+
+  def find_score_combinations(total_score, possibles, score_dict={}):
+      if total_score == 0:
+          return 1
+      elif total_score in score_dict:
+          return score_dict[total_score]
+      else:
+          accum = 0
+          for score in possibles:
+              if score <= total_score:
+                  new_score = total_score - score
+                  accum += find_score_combinations(new_score, possibles, score_dict)
+          score_dict[total_score] = accum
+          print(score_dict)
+          return accum
+
+  print(find_score_combinations(4, possible_scores))
+
+
+
+
+#+END_SRC
 *** TODO 16 Number of ways
 #+BEGIN_SRC python :results output
   from collections import namedtuple
@@ -1414,14 +1521,14 @@ Find the shortest paths to connect a list of words using a given dictionary. Can
           if bytes(new_word) in global_wordict and bytes(new_word) not in mworddict[word]:
               mworddict[word][bytes(new_word)] = bytes(current_word)
               mqueue[word].append(new_word)
-              new_words.add(bytes(new_word))        
+              new_words.add(bytes(new_word))
 
       words = [bytes(word, 'ASCII') for word in words]
       mworddict = {word: {word: None} for word in words}
       mqueue = {word: deque([bytearray(word)]) for word in words}
 
       while(1):
-          new_words = set()        
+          new_words = set()
           for word in words:
               try:
                   current_word = bytearray(mqueue[word].pop())
@@ -1444,7 +1551,7 @@ Find the shortest paths to connect a list of words using a given dictionary. Can
                           del new_word[index]
                           maybe_add_word(word, new_word)
 
-          # Check whether any newly_added word is globally visible                    
+          # Check whether any newly_added word is globally visible
           for new_word in new_words:
               if all([new_word in mworddict[word] for word in mworddict]):
 
@@ -1459,10 +1566,9 @@ Find the shortest paths to connect a list of words using a given dictionary. Can
                       paths[word_string].reverse()
                       paths[word_string] = [x.decode('utf-8') for x in paths[word_string]]
                   return paths
-                      
+
   print(find_word_path(["what", "cat", "hearse"], wordict, True))
-  print(find_word_path(["what", "when"], wordict))    
-      
+  print(find_word_path(["what", "when"], wordict))
 
 #+END_SRC
 
@@ -1580,6 +1686,7 @@ Flight = (start time, originating city, destination city, arrival time). Daily. 
 #+END_SRC
 
 #+RESULTS:
+: ['c', 'b', 'a']
 
 *** 11 Road Network
 #+BEGIN_SRC python :results output
@@ -2050,12 +2157,9 @@ Actually quite complicated, the doing-it-with-two-words part.
 #+END_SRC
 ** DONE Longest Alternating Sequence
 CLOSED: [2015-06-03 Wed 20:13]
-** DONE Longest Subarray Under Sum
-CLOSED: [2015-06-03 Wed 20:13]
 Worked first time I ran it!
 #+BEGIN_SRC python :results output
   sequence = [1, 5, 4, 6, 7, 3, 5, 2, 4, 8, 9]
-
 
   def find_longest_alternating_sequence(sequence):
       longest_sequence = []
@@ -2077,6 +2181,10 @@ Worked first time I ran it!
 
   print(find_longest_alternating_sequence(sequence))
 #+END_SRC
+
+** DONE Longest Subarray Under Sum
+CLOSED: [2015-06-03 Wed 20:13]
+
 #+BEGIN_SRC python :results output
   from itertools import accumulate
   from bisect import bisect_left
@@ -2102,5 +2210,4 @@ Worked first time I ran it!
           
 
   print(longest_subarray_under_sum(sequence, 184))
-
 #+END_SRC
