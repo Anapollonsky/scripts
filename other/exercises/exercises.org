@@ -564,6 +564,60 @@ CLOSED: [2015-06-09 Tue 20:33]
 
 #+RESULTS:
 : [1, 2, 3, 4, 6, 7, 8, 9, 0]
+#+BEGIN_SRC C++ :flags -std=c++14
+  #include <vector>
+  #include <set>
+  #include <unordered_set>
+  #include <algorithm>
+  #include <iostream>
+
+  using namespace std;
+
+  template <typename Type>
+  vector<Type> sorted_unique_elements(vector<Type> input) {
+       set<Type> set(input.begin(), input.end());
+       vector<Type> output(set.begin(), set.end());
+       return(output);
+  }
+
+  template <typename Type>
+  vector <Type> inorder_unique_elements(vector<Type> input) {
+       unordered_set<Type> set;
+       vector<Type> output;
+       for (int i=0; i < input.size(); ++i) {
+            if (set.find(input[i]) == set.end()) {
+                 set.insert(input[i]);
+                 output.push_back(input[i]);
+            } else {
+                 continue;
+            }
+       }
+       return(output);
+  }
+
+  int main() {
+       vector<float> input {1, 9, 2, 3, 4, 6, 7, 7, 8, 9, 0, 0};
+       vector<float> sorted_output = sorted_unique_elements(input);
+       vector<float> ordered_output = inorder_unique_elements(input);
+       for (float i : input) {
+            cout << i << " ";
+       }
+       cout << endl;
+       for (float i : sorted_output) {
+            cout << i << " ";
+       }
+       cout << endl;
+       for (float i : ordered_output) {
+            cout << i << " ";
+       }
+  }
+
+#+END_SRC
+
+#+RESULTS:
+| 1 | 9 | 2 | 3 | 4 | 6 | 7 | 7 | 8 | 9 | 0 | 0 |
+| 0 | 1 | 2 | 3 | 4 | 6 | 7 | 8 | 9 |   |   |   |
+| 1 | 9 | 2 | 3 | 4 | 6 | 7 | 8 | 0 |   |   |   |
 
 *** DONE 15 Pancake Sorting
 CLOSED: [2015-06-05 Fri 20:33]
