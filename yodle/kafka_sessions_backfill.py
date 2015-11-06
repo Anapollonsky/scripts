@@ -96,11 +96,12 @@ def main():
 if __name__ == "__main__":
     main()
 
-##########################################
-# Find subsets between two tables       #
-# SELECT *                              #
-# FROM   B                              #
-# WHERE  NOT EXISTS (SELECT 1           #
-#                    FROM   A           #
-#                    WHERE  A.ID = B.ID) #
-##########################################
+###############################################################################################
+# http://stackoverflow.com/questions/15938180/sql-check-if-entry-in-table-a-exists-in-table-b #
+# Find subsets between two tables                                                            #
+# SELECT *                                                                                   #
+# FROM   B                                                                                   #
+# WHERE  NOT EXISTS (SELECT 1                                                                #
+#                    FROM   A                                                                #
+#                    WHERE  A.ID = B.ID)                                                      #
+###############################################################################################
