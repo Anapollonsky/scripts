@@ -2,7 +2,7 @@
 
 import psycopg2
 import psycopg2.extras
-from time import strftime
+from datetime import datetime
 
 DEV_HOST = "nyc-devdb1.corp.yodle.com"
 QA1_HOST = "qa1-db1.qa1.yodle.com"
@@ -11,7 +11,7 @@ QA2_HOST = "qa2-db1.qa2.yodle.com"
 SESSIONS_TABLE = "control.session"
 QUEUE_TABLE = "mapreduce.session_upload_queue"
 
-CURRENT_HOST = QA2_HOST
+CURRENT_HOST = DEV_HOST
 CURRENT_DATABASE = "natpal"
 CURRENT_USER = "qa"
 CURRENT_PASSWORD = "yodleqa"
@@ -19,7 +19,8 @@ QUERY_LIMIT = 30000000
 
 
 def printWithTime(message):
-    print(strftime("%H:%M:%S") + " | " + message)
+    time = datetime.now().strftime('%H:%M:%S.%f')[:-3]
+    print(time + " | " + message)
 
 def getDictCursorToDBAndPrint(dbname, user, host, password):
     conn = psycopg2.connect("dbname='%s' user='%s' host='%s' password='%s'" % (dbname, user, host, password))
